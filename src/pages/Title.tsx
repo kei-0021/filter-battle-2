@@ -60,7 +60,7 @@ export function Title(props: { onJoin: (name: string) => void }) {
       >
         <h1 style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>Filter Battle 2</h1>
         <p style={{ opacity: 0.8, marginBottom: "2rem", fontSize: "1.1rem", textAlign: "center" }}>
-          あなたの推理でフィルターを見抜け！<br />
+          あなたの推理でみんなのフィルターを見抜け！<br />
           名前を入力して参加しよう。
         </p>
         <input

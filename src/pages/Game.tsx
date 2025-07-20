@@ -3,12 +3,18 @@ import { SubmittedCard } from "../components/SubmittedCard";
 import filters from "../data/filters.json";
 import themes from "../data/themes.json";
 
+type SubmittedCardData = {
+  text: string;
+  playerName: string;
+};
+
 export function Game() {
   const [theme, setTheme] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<keyof typeof filters | "">("");
   const [keywords, setKeywords] = useState<string[]>([]);
   const [keyword, setKeyword] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [submittedCards, setSubmittedCards] = useState<SubmittedCardData[]>([]);
 
   // 初期化処理（フィルターもセット）
   const initializeGame = () => {
@@ -21,8 +27,6 @@ export function Game() {
 
     setKeyword("");
     setSubmitted(false);
-
-    // ここではテーマはセットしない
   };
 
   // 「次へ」でテーマだけ更新する処理
@@ -41,6 +45,8 @@ export function Game() {
 
   const handleSubmit = () => {
     if (keyword.trim()) {
+      // 履歴に追加
+      setSubmittedCards((prev) => [...prev, { text: keyword, playerName: "yourPlayerName" }]);
       setSubmitted(true);
     }
   };
@@ -112,8 +118,26 @@ export function Game() {
             提出
           </button>
         </>
-      ) : (
-        <SubmittedCard text={keyword} playerName={"yourPlayerName"} />
+      ) : null}
+
+      {/* 提出済みカード履歴 */}
+      {submittedCards.length > 0 && (
+        <div
+          style={{
+            marginTop: "3rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "1rem", // カード間のスペース
+            maxWidth: "600px",
+          }}
+        >
+          {submittedCards.map((card, index) => (
+            <SubmittedCard
+              text={card.text}
+              playerName={card.playerName}
+            />
+          ))}
+        </div>
       )}
 
       {submitted && (
