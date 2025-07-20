@@ -1,8 +1,10 @@
 {
   "compilerOptions": {
+    "lib": ["dom", "es2019"],
+    "target": "es2019",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "jsx": "react-jsx"
-    // 他の設定...
   }
 }
