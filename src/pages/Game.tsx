@@ -1,40 +1,52 @@
 import { useEffect, useState } from "react";
+import { SubmittedCard } from "../components/SubmittedCard";
 import filters from "../data/filters.json";
 import themes from "../data/themes.json";
 
 export function Game() {
   const [theme, setTheme] = useState("");
-  const [filter, setFilter] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<keyof typeof filters | "">("");
   const [keywords, setKeywords] = useState<string[]>([]);
   const [keyword, setKeyword] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
-  useEffect(() => {
-    // 初回マウント時にランダムでお題を選ぶ
-    const randomTheme = themes[Math.floor(Math.random() * themes.length)];
-    setTheme(randomTheme);
-
-    // カテゴリのキー一覧を取得
+  // 初期化処理（フィルターもセット）
+  const initializeGame = () => {
     const categories = Object.keys(filters) as (keyof typeof filters)[];
-    // ランダムにカテゴリ選択
     const randomCategory = categories[Math.floor(Math.random() * categories.length)];
     setSelectedCategory(randomCategory);
 
-    // 選ばれたカテゴリの全キーワードをセット
     const selectedKeywords = filters[randomCategory];
     setKeywords(selectedKeywords);
 
-    // そのカテゴリのキーワードからランダムに1つフィルター用に選ぶ
-    const randomFilter = selectedKeywords[Math.floor(Math.random() * selectedKeywords.length)];
-    setFilter(randomFilter);
+    setKeyword("");
+    setSubmitted(false);
+
+    // ここではテーマはセットしない
+  };
+
+  // 「次へ」でテーマだけ更新する処理
+  const updateTheme = () => {
+    const randomTheme = themes[Math.floor(Math.random() * themes.length)];
+    setTheme(randomTheme);
+    setKeyword("");
+    setSubmitted(false);
+  };
+
+  // 最初だけ初期化してテーマもセット
+  useEffect(() => {
+    initializeGame();
+    updateTheme();
   }, []);
 
   const handleSubmit = () => {
     if (keyword.trim()) {
       setSubmitted(true);
-      // 今後: Socket.IOで送信など
     }
+  };
+
+  const handleNextTheme = () => {
+    updateTheme();
   };
 
   return (
@@ -44,7 +56,7 @@ export function Game() {
       </h1>
 
       <h2 style={{ fontSize: "1.5rem", marginBottom: "0.5rem", color: "#6bcfff" }}>
-        フィルター: {selectedCategory}
+        あなたのフィルター: {selectedCategory}
       </h2>
       <div
         style={{
@@ -60,16 +72,16 @@ export function Game() {
         }}
       >
         {filters[selectedCategory]?.join(", ")}
+      </div>
 
-    </div>
       {!submitted ? (
         <>
-          <p style={{ marginBottom: "1rem" }}>このお題に沿ってカードを1つ記入してください。</p>
+          <p style={{ marginBottom: "1rem" }}>このお題に沿って回答を1つ記入してください。</p>
           <input
             type="text"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            placeholder="カードに記入"
+            placeholder="回答を記入"
             style={{
               padding: "0.75rem 1rem",
               fontSize: "1.1rem",
@@ -101,7 +113,26 @@ export function Game() {
           </button>
         </>
       ) : (
-        <p>カード「{keyword}」を提出しました。結果を待っています...</p>
+        <SubmittedCard text={keyword} playerName={"yourPlayerName"} />
+      )}
+
+      {submitted && (
+        <div style={{ marginTop: "4rem", textAlign: "center" }}>
+          <button
+            onClick={handleNextTheme}
+            style={{
+              padding: "0.75rem 1.5rem",
+              backgroundColor: "#007bff",
+              color: "#fff",
+              border: "none",
+              borderRadius: "8px",
+              fontSize: "1rem",
+              cursor: "pointer",
+            }}
+          >
+            次のテーマへ
+          </button>
+        </div>
       )}
     </div>
   );
