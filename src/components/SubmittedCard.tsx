@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { CSSPoperties, useEffect, useRef, useState } from "react";
 
 type SubmittedCardProps = {
   text: string;
   playerName?: string;
+  style?: CSSPoperties
 };
 
 export function SubmittedCard({ text, playerName }: SubmittedCardProps) {
