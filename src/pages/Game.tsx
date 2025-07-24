@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import { SubmittedCard } from "../components/SubmittedCard";
 import filters from "../data/filters.json";
 import themes from "../data/themes.json";
@@ -15,37 +15,45 @@ export function Game() {
   const [keyword, setKeyword] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [submittedCards, setSubmittedCards] = useState<SubmittedCardData[]>([]);
+  const [error, setError] = useState("");
 
   // 初期化処理（フィルターもセット）
   const initializeGame = () => {
     const categories = Object.keys(filters) as (keyof typeof filters)[];
     const randomCategory = categories[Math.floor(Math.random() * categories.length)];
     setSelectedCategory(randomCategory);
-
-    const selectedKeywords = filters[randomCategory];
-    setKeywords(selectedKeywords);
-
+    setKeywords(filters[randomCategory]);
     setKeyword("");
     setSubmitted(false);
+    setError("");
   };
 
-  // 「次へ」でテーマだけ更新する処理
+  // テーマのみ更新
   const updateTheme = () => {
     const randomTheme = themes[Math.floor(Math.random() * themes.length)];
     setTheme(randomTheme);
     setKeyword("");
     setSubmitted(false);
+    setError("");
   };
 
-  // 最初だけ初期化してテーマもセット
   useEffect(() => {
     initializeGame();
     updateTheme();
   }, []);
 
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value.length > 200) {
+      setError("200文字以内で入力してください");
+    } else {
+      setError("");
+    }
+    setKeyword(value);
+  };
+
   const handleSubmit = () => {
-    if (keyword.trim()) {
-      // 履歴に追加
+    if (keyword.trim() && !error) {
       setSubmittedCards((prev) => [...prev, { text: keyword, playerName: "yourPlayerName" }]);
       setSubmitted(true);
     }
@@ -80,13 +88,13 @@ export function Game() {
         {filters[selectedCategory]?.join(", ")}
       </div>
 
-      {!submitted ? (
+      {!submitted && (
         <>
           <p style={{ marginBottom: "1rem" }}>このお題に沿って回答を1つ記入してください。</p>
           <input
             type="text"
             value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
+            onChange={handleInputChange}
             placeholder="回答を記入"
             style={{
               padding: "0.75rem 1rem",
@@ -98,36 +106,48 @@ export function Game() {
               maxWidth: "400px",
               backgroundColor: "#333",
               color: "#fff",
-              marginBottom: "1rem",
+              marginBottom: "0.25rem",
             }}
           />
-          <br />
+          <div
+            style={{
+              fontSize: "0.9rem",
+              color: keyword.length > 200 ? "#ff6b6b" : "#ccc",
+              marginBottom: "0.25rem",
+            }}
+          >
+            {keyword.length}/200
+          </div>
+          {error && (
+            <div style={{ color: "#ff6b6b", fontSize: "0.85rem", marginBottom: "0.5rem" }}>
+              {error}
+            </div>
+          )}
           <button
             onClick={handleSubmit}
-            disabled={!keyword.trim()}
+            disabled={!keyword.trim() || !!error}
             style={{
               padding: "0.75rem 2rem",
               fontSize: "1.1rem",
               borderRadius: "6px",
               border: "none",
-              backgroundColor: keyword.trim() ? "#6bffb0" : "#888",
+              backgroundColor: keyword.trim() && !error ? "#6bffb0" : "#888",
               color: "#000",
-              cursor: keyword.trim() ? "pointer" : "not-allowed",
+              cursor: keyword.trim() && !error ? "pointer" : "not-allowed",
             }}
           >
             提出
           </button>
         </>
-      ) : null}
+      )}
 
-      {/* 提出済みカード履歴 */}
       {submittedCards.length > 0 && (
         <div
           style={{
             marginTop: "3rem",
             display: "flex",
             flexDirection: "column",
-            gap: "1rem", // カード間のスペース
+            gap: "1rem",
             maxWidth: "600px",
           }}
         >
