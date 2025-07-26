@@ -1,5 +1,7 @@
 import { ChangeEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
+import { PokeInputPopup } from "../components/PokeInputPopup";
+import { ResultPopup } from "../components/ResultPopup";
 import { SubmittedCard } from "../components/SubmittedCard";
 import filters from "../data/filters.json";
 import { usePlayer } from "../PlayerContext";
@@ -8,6 +10,7 @@ type SubmittedCardData = {
   text: string;
   playerName: string;
   theme: string;
+  filterCategory: keyof typeof filters;  // 追加
 };
 
 type Player = {
@@ -28,13 +31,24 @@ export function Game() {
   const [submittedCards, setSubmittedCards] = useState<SubmittedCardData[]>([]);
   const [error, setError] = useState("");
   const [players, setPlayers] = useState<Player[]>([]);
-  const [allSubmitted, setAllSubmitted] = useState(false); // ←追加
+  const [allSubmitted, setAllSubmitted] = useState(false);
+
+  // つつき判定結果 state
+  const [pokeTargetPlayer, setPokeTargetPlayer] = useState<string | null>(null);
+  const [pokeResult, setPokeResult] = useState<boolean | null>(null);
 
   const HEADER_HEIGHT = 150;
   const INPUT_HEIGHT = 120;
 
   const cardsContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // 最新カード抽出マップ
+  const latestCardsMap = new Map<string, SubmittedCardData>();
+  submittedCards.forEach((card) => {
+    latestCardsMap.set(card.playerName, card);
+  });
+  const latestCards = Array.from(latestCardsMap.values());
 
   // カテゴリ選択は最初だけ
   useEffect(() => {
@@ -79,7 +93,7 @@ export function Game() {
       setTheme(newTheme);
       setSubmitted(false);
       setKeyword("");
-      setAllSubmitted(false); // 新テーマなのでリセット
+      // カードは残す仕様のまま
     });
 
     socket.on("allSubmittedStatus", (status: boolean) => {
@@ -136,6 +150,7 @@ export function Game() {
         text: keyword,
         playerName: playerName || "名無し",
         theme,
+        filterCategory: selectedCategory, // サーバー側と名前を合わせる
       };
       console.log("submitイベント送信:", newCard);
       socket.emit("submit", newCard);
@@ -144,10 +159,28 @@ export function Game() {
     }
   };
 
-  // 「次のテーマへ」ボタンは全員提出済みかつ自分が提出済みなら表示・有効化
   const handleNextTheme = () => {
     socket.emit("nextTheme");
   };
+
+  const handlePokeSubmit = (input: string) => {
+    if (!pokeTargetPlayer) return;
+
+    const targetCard = submittedCards.find(card => card.playerName === pokeTargetPlayer);
+    if (!targetCard) return;
+
+    const normalizedGuess = input.trim();
+    const isCorrect = normalizedGuess === targetCard.filterCategory;
+
+    setPokeResult(isCorrect);
+    setPokeTargetPlayer(null);
+  };
+
+  const handlePoke = (targetPlayerName: string) => {
+    setPokeTargetPlayer(targetPlayerName);
+  };
+
+  const closePopup = () => setPokeResult(null);
 
   return (
     <>
@@ -218,15 +251,17 @@ export function Game() {
           zIndex: 50,
         }}
       >
-        {submittedCards.map((card, index) => (
-          <div key={index} style={{ marginBottom: "1rem" }}>
+        {latestCards.map((card) => (
+          <div key={card.playerName} style={{ marginBottom: "1rem" }}>
             <SubmittedCard
               text={card.text}
               theme={card.theme}
               playerName={card.playerName}
               filterKeywords={filters[selectedCategory] || []}
-              showPokeButton={index === submittedCards.length - 1}
+              showPokeButton={true}
               useBubbleStyle={true}
+              // pokeResult={pokeResults[card.playerName] ?? null}
+              onPoke={() => handlePoke(card.playerName)}
             />
           </div>
         ))}
@@ -322,7 +357,6 @@ export function Game() {
           >
             {keyword.length} / 200
           </div>
-
           {!submitted && (
             <button
               onClick={handleSubmit}
@@ -348,7 +382,7 @@ export function Game() {
           {submitted && (
             <button
               onClick={handleNextTheme}
-              disabled={!allSubmitted} // みんな提出済みでないと押せないように
+              disabled={!allSubmitted}
               style={{
                 padding: "0.75rem 1.5rem",
                 backgroundColor: allSubmitted ? "#007bff" : "#555",
@@ -365,6 +399,14 @@ export function Game() {
           )}
         </div>
       </div>
+
+      <PokeInputPopup
+        targetPlayerName={pokeTargetPlayer}
+        onSubmit={handlePokeSubmit}
+        onClose={() => setPokeTargetPlayer(null)}
+      />
+
+      <ResultPopup result={pokeResult} onClose={closePopup} />
     </>
   );
 }

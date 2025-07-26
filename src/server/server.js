@@ -10,7 +10,7 @@ const io = new Server(server, {
 });
 
 const players = new Map(); // socket.id => playerName
-const submissionsCount = new Map(); // socket.id => true/false（提出済みか）
+const submissionsCount = new Map(); // socket.id => boolean（提出済みか）
 let currentTheme = null;
 
 const chooseRandomTheme = () => {
@@ -21,12 +21,12 @@ const chooseRandomTheme = () => {
 io.on("connection", (socket) => {
   console.log(`[CONNECT] Socket connected: ${socket.id}`);
 
-  // 新規接続時は提出フラグ初期化
+  // 新規接続時は提出フラグをfalseに設定（未提出）
   submissionsCount.set(socket.id, false);
 
   socket.on("join", (name) => {
     players.set(socket.id, name);
-    submissionsCount.set(socket.id, false); // 加入時は未提出
+    submissionsCount.set(socket.id, false); // 加入時は未提出にリセット
 
     console.log(`[JOIN] Player joined: ${name} (socket: ${socket.id})`);
     console.log(`[PLAYERS] Current players: ${Array.from(players.values()).join(", ")}`);
@@ -38,17 +38,18 @@ io.on("connection", (socket) => {
     io.emit("playersUpdate", Array.from(players.values()));
     socket.emit("themeUpdate", currentTheme);
 
-    // 加入時に全員提出済みかもチェック
+    // 加入時に全員提出済みかチェックして通知
     const allSubmitted = Array.from(submissionsCount.values()).every((v) => v === true);
     io.emit("allSubmittedStatus", allSubmitted);
   });
 
   socket.on("submit", (data) => {
     submissionsCount.set(socket.id, true);
-    console.log(`[SUBMIT] From ${data.playerName}: "${data.text}" (theme: ${data.theme})`);
-    io.emit("newSubmission", data);
 
-    // 全員提出済みかチェックして送信
+    console.log(`[SUBMIT] From ${data.playerName}: "${data.text}" (theme: ${data.theme}, filterCategory: ${data.filterCategory})`);
+    io.emit("newSubmission", data);  // dataにfilterCategoryを含む想定
+
+    // 提出後、全員提出済みかチェックして通知
     const allSubmitted = Array.from(submissionsCount.values()).every((v) => v === true);
     io.emit("allSubmittedStatus", allSubmitted);
   });
@@ -56,11 +57,14 @@ io.on("connection", (socket) => {
   socket.on("nextTheme", () => {
     currentTheme = chooseRandomTheme();
 
-    // テーマ切り替え時は提出状況リセット
-    submissionsCount.forEach((_, key) => submissionsCount.set(key, false));
+    // テーマ切り替え時に全プレイヤーの提出フラグを未提出にリセット
+    submissionsCount.forEach((_, key) => {
+      submissionsCount.set(key, false);
+    });
 
     io.emit("themeUpdate", currentTheme);
     io.emit("allSubmittedStatus", false);
+
     console.log(`[THEME] Theme changed to: ${currentTheme}`);
   });
 
@@ -74,7 +78,7 @@ io.on("connection", (socket) => {
 
     io.emit("playersUpdate", Array.from(players.values()));
 
-    // 切断後に全員提出済みか再チェック
+    // 切断後に全員提出済みか再チェックして通知
     const allSubmitted = Array.from(submissionsCount.values()).every((v) => v === true);
     io.emit("allSubmittedStatus", allSubmitted);
   });

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import "../styles/bubble-style.css"; // バブル用CSS読み込み
-import "../styles/original-style.css"; // 元のCSSも残すなら
+import "../styles/bubble-style.css";
 
 type SubmittedCardProps = {
   text: string;
@@ -9,6 +8,8 @@ type SubmittedCardProps = {
   filterKeywords?: string[];
   showPokeButton?: boolean;
   useBubbleStyle?: boolean;
+  pokeResult?: boolean | null;
+  onPoke?: () => void;
 };
 
 export function SubmittedCard({
@@ -18,11 +19,11 @@ export function SubmittedCard({
   filterKeywords,
   showPokeButton = false,
   useBubbleStyle = true,
+  pokeResult = null,
+  onPoke,
 }: SubmittedCardProps) {
   const [visible, setVisible] = useState(false);
   const [fontSize, setFontSize] = useState(30);
-  const [wasPoked, setWasPoked] = useState(false);
-  const [pokeSuccess, setPokeSuccess] = useState<boolean | null>(null);
 
   const textRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -41,7 +42,7 @@ export function SubmittedCard({
       textEl.style.fontSize = `${currentSize}px`;
 
       while (
-        (textEl.scrollHeight > cardEl.clientHeight - 32 || // 少し余裕をもたせる
+        (textEl.scrollHeight > cardEl.clientHeight - 32 ||
           textEl.scrollWidth > cardEl.clientWidth - 24) &&
         currentSize > 10
       ) {
@@ -55,24 +56,16 @@ export function SubmittedCard({
     adjustFontSize();
   }, [text]);
 
-  const handlePoke = () => {
-    const guess = prompt("PlayerNameのフィルターキーワードは？");
-    if (!guess) return;
-    const success = filterKeywords?.includes(guess) ?? false;
-    setPokeSuccess(success);
-    setWasPoked(true);
-  };
-
   return (
     <div
       ref={cardRef}
-      className={useBubbleStyle ? "bubble-style" : "original-style"}
+      className={useBubbleStyle ? "bubble-style" : ""}
       style={{
         fontSize: `${fontSize}px`,
         transform: visible ? "translateX(0)" : "translateX(100vw)",
         opacity: visible ? 1 : 0,
         transition: "transform 0.4s ease-out, opacity 0.4s ease-out",
-        ...(!useBubbleStyle ? { padding: "1rem" } : {}),
+        padding: !useBubbleStyle ? "1rem" : undefined,
       }}
     >
       {theme && (
@@ -116,15 +109,11 @@ export function SubmittedCard({
         </div>
       )}
 
-      {!wasPoked && showPokeButton ? (
-        <button className="poke-button" onClick={handlePoke}>
+      {showPokeButton && pokeResult === null && onPoke && (
+        <button className="poke-button" onClick={onPoke}>
           👈 つつく
         </button>
-      ) : wasPoked ? (
-        <span className={`poke-result ${pokeSuccess ? "poke-success" : "poke-fail"}`}>
-          {pokeSuccess ? "🎯 正解！" : "❌ ハズレ"}
-        </span>
-      ) : null}
+      )}
     </div>
   );
 }
