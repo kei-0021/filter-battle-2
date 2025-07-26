@@ -24,6 +24,7 @@ export function SubmittedCard({
 }: SubmittedCardProps) {
   const [visible, setVisible] = useState(false);
   const [fontSize, setFontSize] = useState(30);
+  const [isPopped, setIsPopped] = useState(false);
 
   const textRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -56,10 +57,23 @@ export function SubmittedCard({
     adjustFontSize();
   }, [text]);
 
+  // つつき成功したら割れるアニメーション開始＆非表示
+  useEffect(() => {
+    if (pokeResult === true) {
+      setIsPopped(true);
+      const timer = setTimeout(() => setVisible(false), 500); // アニメーション長に合わせる
+      return () => clearTimeout(timer);
+    }
+  }, [pokeResult]);
+
+  if (!visible) return null;
+
   return (
     <div
       ref={cardRef}
-      className={useBubbleStyle ? "bubble-style" : ""}
+      className={`${useBubbleStyle ? "bubble-style" : ""} ${
+        isPopped ? "bubble-pop" : ""
+      }`}
       style={{
         fontSize: `${fontSize}px`,
         transform: visible ? "translateX(0)" : "translateX(100vw)",

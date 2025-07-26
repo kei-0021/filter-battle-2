@@ -167,8 +167,16 @@ export function Game() {
     const normalizedGuess = input.trim();
     const isCorrect = normalizedGuess === targetCard.filterCategory;
 
+    console.log("つつき判定", {
+      input,
+      targetPlayer: pokeTargetPlayer,
+      targetFilter: targetCard.filterCategory,
+      isCorrect,
+    });
+
     setPokeResult(isCorrect);
-    setPokeTargetPlayer(null);
+    // しばらくpokeTargetPlayerは残す（アニメーション中は使いたい）
+    setTimeout(() => setPokeTargetPlayer(null), 500); // 0.5秒後に消すなど
 
     if (isCorrect) {
       setPlayerScores(prev => ({
@@ -177,6 +185,7 @@ export function Game() {
       }));
     }
   };
+
 
   const handlePoke = (targetPlayerName: string) => {
     setPokeTargetPlayer(targetPlayerName);
@@ -255,9 +264,10 @@ export function Game() {
       >
         {cardsToShow.map((card, index) => {
           const isLatestCardForPlayer =
-            cardsToShow
-              .filter((c) => c.playerName === card.playerName)
-              .at(-1) === card;
+            cardsToShow.filter((c) => c.playerName === card.playerName).at(-1) === card;
+
+          // 今つつき対象のカードかどうかを判定
+          const isPopped = pokeResult === true && pokeTargetPlayer === card.playerName;
 
           return (
             <div key={`${card.playerName}-${index}`} style={{ marginBottom: "1rem" }}>
@@ -268,14 +278,16 @@ export function Game() {
                 filterKeywords={filters[selectedCategory] || []}
                 showPokeButton={card.playerName !== playerName && isLatestCardForPlayer}
                 useBubbleStyle={true}
+                pokeResult={isPopped ? true : null} // ここが重要
                 onPoke={() => handlePoke(card.playerName)}
               />
             </div>
           );
         })}
+
       </div>
 
-      {/* 右サイド プレイヤー一覧 */}
+      {/* 右サイド 参加者一覧 */}
       <div
         style={{
           position: "fixed",
@@ -292,7 +304,7 @@ export function Game() {
           zIndex: 100,
         }}
       >
-        <h3 style={{ marginTop: 0 }}>プレイヤー一覧</h3>
+        <h3 style={{ marginTop: 0 }}>プレイヤーリスト</h3>
         <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
           {players.length === 0 && <li>参加者なし</li>}
           {players.map((player, idx) => {
