@@ -10,7 +10,7 @@ type SubmittedCardData = {
   text: string;
   playerName: string;
   theme: string;
-  filterCategory: keyof typeof filters;  // 追加
+  filterCategory: keyof typeof filters;
 };
 
 type Player = {
@@ -33,9 +33,9 @@ export function Game() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [allSubmitted, setAllSubmitted] = useState(false);
 
-  // つつき判定結果 state
   const [pokeTargetPlayer, setPokeTargetPlayer] = useState<string | null>(null);
   const [pokeResult, setPokeResult] = useState<boolean | null>(null);
+  const [playerScores, setPlayerScores] = useState<{ [playerName: string]: number }>({});
 
   const HEADER_HEIGHT = 150;
   const INPUT_HEIGHT = 120;
@@ -43,14 +43,9 @@ export function Game() {
   const cardsContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // 最新カード抽出マップ
-  const latestCardsMap = new Map<string, SubmittedCardData>();
-  submittedCards.forEach((card) => {
-    latestCardsMap.set(card.playerName, card);
-  });
-  const latestCards = Array.from(latestCardsMap.values());
+  // すべての提出カードを表示（お題ごとに分けずに履歴として全部表示）
+  const cardsToShow = submittedCards;
 
-  // カテゴリ選択は最初だけ
   useEffect(() => {
     const categories = Object.keys(filters) as (keyof typeof filters)[];
     const randomCategory = categories[Math.floor(Math.random() * categories.length)];
@@ -150,7 +145,7 @@ export function Game() {
         text: keyword,
         playerName: playerName || "名無し",
         theme,
-        filterCategory: selectedCategory, // サーバー側と名前を合わせる
+        filterCategory: selectedCategory,
       };
       console.log("submitイベント送信:", newCard);
       socket.emit("submit", newCard);
@@ -166,7 +161,7 @@ export function Game() {
   const handlePokeSubmit = (input: string) => {
     if (!pokeTargetPlayer) return;
 
-    const targetCard = submittedCards.find(card => card.playerName === pokeTargetPlayer);
+    const targetCard = submittedCards.filter((card) => card.playerName === pokeTargetPlayer).pop();
     if (!targetCard) return;
 
     const normalizedGuess = input.trim();
@@ -174,6 +169,13 @@ export function Game() {
 
     setPokeResult(isCorrect);
     setPokeTargetPlayer(null);
+
+    if (isCorrect) {
+      setPlayerScores(prev => ({
+        ...prev,
+        [playerName]: (prev[playerName] || 0) + 3,
+      }));
+    }
   };
 
   const handlePoke = (targetPlayerName: string) => {
@@ -251,20 +253,26 @@ export function Game() {
           zIndex: 50,
         }}
       >
-        {latestCards.map((card) => (
-          <div key={card.playerName} style={{ marginBottom: "1rem" }}>
-            <SubmittedCard
-              text={card.text}
-              theme={card.theme}
-              playerName={card.playerName}
-              filterKeywords={filters[selectedCategory] || []}
-              showPokeButton={true}
-              useBubbleStyle={true}
-              // pokeResult={pokeResults[card.playerName] ?? null}
-              onPoke={() => handlePoke(card.playerName)}
-            />
-          </div>
-        ))}
+        {cardsToShow.map((card, index) => {
+          const isLatestCardForPlayer =
+            cardsToShow
+              .filter((c) => c.playerName === card.playerName)
+              .at(-1) === card;
+
+          return (
+            <div key={`${card.playerName}-${index}`} style={{ marginBottom: "1rem" }}>
+              <SubmittedCard
+                text={card.text}
+                theme={card.theme}
+                playerName={card.playerName}
+                filterKeywords={filters[selectedCategory] || []}
+                showPokeButton={card.playerName !== playerName && isLatestCardForPlayer}
+                useBubbleStyle={true}
+                onPoke={() => handlePoke(card.playerName)}
+              />
+            </div>
+          );
+        })}
       </div>
 
       {/* 右サイド プレイヤー一覧 */}
@@ -287,18 +295,30 @@ export function Game() {
         <h3 style={{ marginTop: 0 }}>プレイヤー一覧</h3>
         <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
           {players.length === 0 && <li>参加者なし</li>}
-          {players.map((player, idx) => (
-            <li
-              key={idx}
-              style={{
-                padding: "0.25rem 0",
-                borderBottom: "1px solid #444",
-                fontWeight: player.name === playerName ? "bold" : "normal",
-              }}
-            >
-              {player.name}
-            </li>
-          ))}
+          {players.map((player, idx) => {
+            const score = playerScores[player.name] || 0;
+            const isMe = player.name === playerName;
+
+            return (
+              <li
+                key={idx}
+                style={{
+                  padding: "0.25rem 0",
+                  borderBottom: "1px solid #444",
+                  fontWeight: isMe ? "bold" : "normal",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  color: isMe ? "#00ff99" : "#eee",
+                  backgroundColor: isMe ? "#003300" : "transparent",
+                  borderRadius: isMe ? "4px" : undefined,
+                  transition: "background-color 0.3s ease",
+                }}
+              >
+                <span>{player.name}</span>
+                <span>{score}点</span>
+              </li>
+            );
+          })}
         </ul>
       </div>
 

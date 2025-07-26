@@ -54,7 +54,7 @@ export function ResultPopup({ result, onClose }: ResultPopupProps) {
         >
           ×
         </button>
-        {result ? "🎯 正解！" : "❌ ハズレ"}
+        {result ? "🎯 正解！ +3点" : "❌ ハズレ"}
       </div>
     </>
   );
