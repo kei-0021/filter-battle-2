@@ -6,6 +6,7 @@ import themes from "../data/themes.json";
 type SubmittedCardData = {
   text: string;
   playerName: string;
+  theme: string;
 };
 
 export function Game() {
@@ -21,9 +22,7 @@ export function Game() {
   const HEADER_HEIGHT = 150;
   const INPUT_HEIGHT = 160;
 
-  // ここでdivコンテナのrefを用意
   const cardsContainerRef = useRef<HTMLDivElement>(null);
-
   const inputRef = useRef<HTMLInputElement>(null);
 
   const initializeGame = () => {
@@ -44,23 +43,20 @@ export function Game() {
     setError("");
   };
 
-  // 初期化（1回だけ）
   useEffect(() => {
     initializeGame();
     updateTheme();
   }, []);
 
-  // お題が変わったらフォーカス
   useEffect(() => {
     inputRef.current?.focus();
   }, [theme]);
 
-  // submittedCardsが増えたらスクロールする
   useEffect(() => {
     if (cardsContainerRef.current) {
       cardsContainerRef.current.scrollTo({
         top: cardsContainerRef.current.scrollHeight,
-        behavior: "smooth",  // ← ここを追加
+        behavior: "smooth",
       });
     }
   }, [submittedCards]);
@@ -91,7 +87,10 @@ export function Game() {
 
   const handleSubmit = () => {
     if (keyword.trim() && !error) {
-      setSubmittedCards((prev) => [...prev, { text: keyword, playerName: "yourPlayerName" }]);
+      setSubmittedCards((prev) => [
+        ...prev,
+        { text: keyword, playerName: "yourPlayerName", theme }
+      ]);
       setSubmitted(true);
       setKeyword("");
     }
@@ -153,7 +152,7 @@ export function Game() {
       </div>
 
       <div
-        ref={cardsContainerRef} // ここでrefをセット
+        ref={cardsContainerRef}
         style={{
           paddingTop: HEADER_HEIGHT + 60,
           paddingBottom: INPUT_HEIGHT + 40,
@@ -168,8 +167,15 @@ export function Game() {
         }}
       >
         {submittedCards.map((card, index) => (
-          <div key={index} style={{ marginBottom: index !== submittedCards.length - 1 ? "1rem" : 0 }}>
-            <SubmittedCard text={card.text} playerName={card.playerName} />
+          <div key={index} style={{ marginBottom: "1rem" }}>
+            <SubmittedCard
+              text={card.text}
+              theme={card.theme}
+              playerName={card.playerName}
+              filterKeywords={filters[selectedCategory] || []}
+              showPokeButton={index === submittedCards.length - 1}
+              useBubbleStyle={true}
+            />
           </div>
         ))}
       </div>
@@ -197,11 +203,11 @@ export function Game() {
       >
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
           <input
-            ref={inputRef} // ←これが必要
+            ref={inputRef}
             type="text"
             value={keyword}
             onChange={handleInputChange}
-            onKeyDown={handleKeyDown}  // ここ追加
+            onKeyDown={handleKeyDown}
             onCompositionStart={handleCompositionStart}
             onCompositionEnd={handleCompositionEnd}
             placeholder="回答を記入"
@@ -215,8 +221,11 @@ export function Game() {
               backgroundColor: "#333",
               color: "#fff",
             }}
-            disabled={submitted} // 提出後は入力禁止に
+            disabled={submitted}
           />
+          <div style={{ color: "#aaa", fontSize: "0.9rem", marginTop: "0.2rem", textAlign: "right" }}>
+            {keyword.length} / 200
+          </div>
           {!submitted && (
             <button
               onClick={handleSubmit}

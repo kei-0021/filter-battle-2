@@ -1,14 +1,29 @@
-import { CSSPoperties, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import "../styles/bubble-style.css"; // バブル用CSS読み込み
+import "../styles/original-style.css"; // 元のCSSも残すなら
 
 type SubmittedCardProps = {
   text: string;
   playerName?: string;
-  style?: CSSPoperties
+  theme: string;
+  filterKeywords?: string[];
+  showPokeButton?: boolean;
+  useBubbleStyle?: boolean;
 };
 
-export function SubmittedCard({ text, playerName }: SubmittedCardProps) {
+export function SubmittedCard({
+  text,
+  playerName,
+  theme,
+  filterKeywords,
+  showPokeButton = false,
+  useBubbleStyle = true,
+}: SubmittedCardProps) {
   const [visible, setVisible] = useState(false);
-  const [fontSize, setFontSize] = useState(24); // 初期フォントサイズ
+  const [fontSize, setFontSize] = useState(30);
+  const [wasPoked, setWasPoked] = useState(false);
+  const [pokeSuccess, setPokeSuccess] = useState<boolean | null>(null);
+
   const textRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -16,52 +31,62 @@ export function SubmittedCard({ text, playerName }: SubmittedCardProps) {
     setVisible(true);
   }, []);
 
-  // テキストサイズ調整
   useEffect(() => {
     const adjustFontSize = () => {
       const textEl = textRef.current;
       const cardEl = cardRef.current;
       if (!textEl || !cardEl) return;
 
-      let currentSize = 24; // 初期サイズ
+      let currentSize = 30;
       textEl.style.fontSize = `${currentSize}px`;
 
       while (
-        (textEl.scrollHeight > cardEl.clientHeight - 28 || // 名前分の余白確保（28px）
-          textEl.scrollWidth > cardEl.clientWidth - 20) &&
+        (textEl.scrollHeight > cardEl.clientHeight - 32 || // 少し余裕をもたせる
+          textEl.scrollWidth > cardEl.clientWidth - 24) &&
         currentSize > 10
       ) {
         currentSize -= 1;
         textEl.style.fontSize = `${currentSize}px`;
       }
+
       setFontSize(currentSize);
     };
 
     adjustFontSize();
   }, [text]);
 
+  const handlePoke = () => {
+    const guess = prompt("PlayerNameのフィルターキーワードは？");
+    if (!guess) return;
+    const success = filterKeywords?.includes(guess) ?? false;
+    setPokeSuccess(success);
+    setWasPoked(true);
+  };
+
   return (
     <div
       ref={cardRef}
+      className={useBubbleStyle ? "bubble-style" : "original-style"}
       style={{
-        position: "relative",
-        display: "inline-block",
-        width: "400px",
-        height: "160px",
-        backgroundColor: "#6bffb0",
-        color: "#000",
-        padding: "1rem",
-        borderRadius: "16px",
-        boxShadow: "0 6px 14px rgba(107, 255, 176, 0.7)",
         fontSize: `${fontSize}px`,
-        fontWeight: "700",
-        userSelect: "none",
         transform: visible ? "translateX(0)" : "translateX(100vw)",
         opacity: visible ? 1 : 0,
         transition: "transform 0.4s ease-out, opacity 0.4s ease-out",
-        overflow: "hidden",
+        ...(!useBubbleStyle ? { padding: "1rem" } : {}),
       }}
     >
+      {theme && (
+        <div
+          className="theme"
+          style={{
+            color: useBubbleStyle ? "rgba(255 255 255 / 0.8)" : "rgba(0,0,0,0.4)",
+            textShadow: useBubbleStyle ? "0 0 5px #0008" : undefined,
+          }}
+        >
+          {theme}
+        </div>
+      )}
+
       <div
         ref={textRef}
         style={{
@@ -69,8 +94,11 @@ export function SubmittedCard({ text, playerName }: SubmittedCardProps) {
           width: "100%",
           wordBreak: "break-word",
           whiteSpace: "normal",
-          paddingBottom: playerName ? "28px" : undefined, // 名前の領域分パディングを追加
+          paddingTop: "1.4rem",
+          paddingBottom: playerName ? "30px" : undefined,
           boxSizing: "border-box",
+          color: useBubbleStyle ? "#fff" : undefined,
+          textShadow: useBubbleStyle ? "0 0 5px #0008" : undefined,
         }}
       >
         {text}
@@ -78,19 +106,25 @@ export function SubmittedCard({ text, playerName }: SubmittedCardProps) {
 
       {playerName && (
         <div
+          className="playerName"
           style={{
-            position: "absolute",
-            bottom: "8px",
-            right: "12px",
-            fontSize: "0.75rem",
-            color: "rgba(0,0,0,0.4)",
-            fontWeight: "500",
-            userSelect: "none",
+            color: useBubbleStyle ? "rgba(255 255 255 / 0.8)" : "rgba(0,0,0,0.4)",
+            textShadow: useBubbleStyle ? "0 0 5px #0008" : undefined,
           }}
         >
           {playerName}
         </div>
       )}
+
+      {!wasPoked && showPokeButton ? (
+        <button className="poke-button" onClick={handlePoke}>
+          👈 つつく
+        </button>
+      ) : wasPoked ? (
+        <span className={`poke-result ${pokeSuccess ? "poke-success" : "poke-fail"}`}>
+          {pokeSuccess ? "🎯 正解！" : "❌ ハズレ"}
+        </span>
+      ) : null}
     </div>
   );
 }

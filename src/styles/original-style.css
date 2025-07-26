@@ -1,0 +1,72 @@
+/* original-style.css */
+.original-style {
+  position: relative;
+  display: inline-block;
+  width: 400px;
+  height: 160px;
+  background-color: #6bffb0;
+  color: #000;
+  padding: 1rem;
+  border-radius: 16px;
+  box-shadow: 0 6px 14px rgba(107, 255, 176, 0.7);
+  font-weight: 700;
+  user-select: none;
+  overflow: hidden;
+  box-sizing: border-box;
+  transition: transform 0.4s ease-out, opacity 0.4s ease-out;
+}
+
+.original-style .theme {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  font-size: 0.75rem;
+  color: rgba(0,0,0,0.4);
+  font-weight: 500;
+  user-select: none;
+}
+
+.original-style .playerName {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  font-size: 0.75rem;
+  color: rgba(0,0,0,0.4);
+  font-weight: 500;
+  user-select: none;
+}
+
+.original-style button.poke-button {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background-color: #f5f3e7;
+  color: #555;
+  border: 1.5px solid #ccc;
+  border-radius: 12px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.1s ease-in-out;
+  box-shadow: 1px 1px 4px rgba(0,0,0,0.1);
+}
+
+.original-style button.poke-button:hover {
+  transform: scale(1.05);
+}
+
+.original-style .poke-result {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  user-select: none;
+}
+.original-style .poke-success {
+  color: green;
+}
+.original-style .poke-fail {
+  color: red;
+}
