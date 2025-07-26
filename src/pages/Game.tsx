@@ -1,8 +1,9 @@
 import { ChangeEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
+import { io, Socket } from "socket.io-client";
 import { SubmittedCard } from "../components/SubmittedCard";
 import filters from "../data/filters.json";
 import themes from "../data/themes.json";
-import { usePlayer } from "../PlayerContext"; // 追加
+import { usePlayer } from "../PlayerContext";
 
 type SubmittedCardData = {
   text: string;
@@ -10,8 +11,11 @@ type SubmittedCardData = {
   theme: string;
 };
 
+let socket: Socket;
+
 export function Game() {
-  const { playerName } = usePlayer(); // ← 名前を取得
+  const { playerName } = usePlayer();
+
   const [theme, setTheme] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<keyof typeof filters | "">("");
   const [keywords, setKeywords] = useState<string[]>([]);
@@ -27,6 +31,7 @@ export function Game() {
   const cardsContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // 初期カテゴリー＆テーマ設定
   const initializeGame = () => {
     const categories = Object.keys(filters) as (keyof typeof filters)[];
     const randomCategory = categories[Math.floor(Math.random() * categories.length)];
@@ -48,7 +53,36 @@ export function Game() {
   useEffect(() => {
     initializeGame();
     updateTheme();
-  }, []);
+
+    console.log("Socket.IO接続開始...");
+    socket = io("http://localhost:3001");
+
+    socket.on("connect", () => {
+      console.log("Socket.IO connected, id:", socket.id);
+      if (playerName) {
+        socket.emit("join", playerName);
+        console.log("joinイベント送信:", playerName);
+      }
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log("Socket.IO disconnected:", reason);
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("Socket.IO connect_error:", err);
+    });
+
+    socket.on("newSubmission", (data: SubmittedCardData) => {
+      console.log("newSubmissionイベント受信:", data);
+      setSubmittedCards((prev) => [...prev, data]);
+    });
+
+    return () => {
+      console.log("Socket.IO切断");
+      socket.disconnect();
+    };
+  }, [playerName]);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -89,10 +123,13 @@ export function Game() {
 
   const handleSubmit = () => {
     if (keyword.trim() && !error) {
-      setSubmittedCards((prev) => [
-        ...prev,
-        { text: keyword, playerName: playerName || "名無し", theme }
-      ]);
+      const newCard = {
+        text: keyword,
+        playerName: playerName || "名無し",
+        theme,
+      };
+      console.log("submitイベント送信:", newCard);
+      socket.emit("submit", newCard);
       setSubmitted(true);
       setKeyword("");
     }
@@ -225,7 +262,14 @@ export function Game() {
             }}
             disabled={submitted}
           />
-          <div style={{ color: "#aaa", fontSize: "0.9rem", marginTop: "0.2rem", textAlign: "right" }}>
+          <div
+            style={{
+              color: "#aaa",
+              fontSize: "0.9rem",
+              marginTop: "0.2rem",
+              textAlign: "right",
+            }}
+          >
             {keyword.length} / 200
           </div>
           {!submitted && (
@@ -241,7 +285,9 @@ export function Game() {
                   !keyword.trim() || !!error || submitted ? "#888" : "#6bffb0",
                 color: "#000",
                 cursor:
-                  !keyword.trim() || !!error || submitted ? "not-allowed" : "pointer",
+                  !keyword.trim() || !!error || submitted
+                    ? "not-allowed"
+                    : "pointer",
                 whiteSpace: "nowrap",
               }}
             >
