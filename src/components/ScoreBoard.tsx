@@ -3,13 +3,11 @@ import { Player } from "../types/gameTypes";
 
 type ScoreBoardProps = {
   players: Player[];
-  playerScores: { [playerName: string]: number };
   currentPlayerName: string;
 };
 
 export const ScoreBoard: React.FC<ScoreBoardProps> = ({
   players,
-  playerScores,
   currentPlayerName,
 }) => {
   return (
@@ -33,7 +31,6 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
       <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
         {players.length === 0 && <li>参加者なし</li>}
         {players.map((player, idx) => {
-          const score = playerScores[player.name] || 0;
           const isMe = player.name === currentPlayerName;
 
           return (
@@ -52,7 +49,7 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
               }}
             >
               <span>{player.name}</span>
-              <span>{score}点</span>
+              <span>{player.score}点</span>
             </li>
           );
         })}

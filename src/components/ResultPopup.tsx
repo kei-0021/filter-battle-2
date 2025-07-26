@@ -1,9 +1,18 @@
+import { useEffect } from "react";
+
 type ResultPopupProps = {
   result: boolean | null;
   onClose: () => void;
 };
 
 export function ResultPopup({ result, onClose }: ResultPopupProps) {
+  useEffect(() => {
+    if (result !== null) {
+      const timer = setTimeout(onClose, 500); // 0.5秒後に自動で閉じる
+      return () => clearTimeout(timer); // クリーンアップ
+    }
+  }, [result, onClose]);
+
   if (result === null) return null;
 
   return (
@@ -16,7 +25,7 @@ export function ResultPopup({ result, onClose }: ResultPopupProps) {
           backgroundColor: "rgba(0, 0, 0, 0.5)",
           zIndex: 1000,
         }}
-        onClick={onClose} // 背景クリックで閉じる
+        onClick={onClose} // 背景クリックでも閉じる
       />
       {/* 中央のポップアップ */}
       <div
@@ -37,23 +46,6 @@ export function ResultPopup({ result, onClose }: ResultPopupProps) {
           minWidth: "200px",
         }}
       >
-        <button
-          onClick={onClose}
-          aria-label="閉じる"
-          style={{
-            position: "absolute",
-            top: "8px",
-            right: "8px",
-            background: "transparent",
-            border: "none",
-            color: "#fff",
-            fontSize: "1.2rem",
-            cursor: "pointer",
-            userSelect: "none",
-          }}
-        >
-          ×
-        </button>
         {result ? "🎯 正解！ +3点" : "❌ ハズレ"}
       </div>
     </>

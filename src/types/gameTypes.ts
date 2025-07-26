@@ -8,4 +8,5 @@ export type SubmittedCardData = {
 
 export type Player = {
   name: string;
+  score: number; // 追加
 };

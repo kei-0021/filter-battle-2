@@ -29,7 +29,6 @@ export function Game() {
 
   const [pokeTargetPlayer, setPokeTargetPlayer] = useState<string | null>(null);
   const [pokeResult, setPokeResult] = useState<boolean | null>(null);
-  const [playerScores, setPlayerScores] = useState<{ [playerName: string]: number }>({});
 
   const HEADER_HEIGHT = 150;
   const INPUT_HEIGHT = 120;
@@ -37,7 +36,6 @@ export function Game() {
   const cardsContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // すべての提出カードを表示（お題ごとに分けずに履歴として全部表示）
   const cardsToShow = submittedCards;
 
   useEffect(() => {
@@ -68,13 +66,12 @@ export function Game() {
     });
 
     socket.on("newSubmission", (data: SubmittedCardData) => {
-      console.log("newSubmissionイベント受信:", data);
       setSubmittedCards((prev) => [...prev, data]);
     });
 
-    socket.on("playersUpdate", (updatedPlayers: string[]) => {
+    socket.on("playersUpdate", (updatedPlayers: { name: string; score: number }[]) => {
       console.log("playersUpdateイベント受信:", updatedPlayers);
-      setPlayers(updatedPlayers.map((name) => ({ name })));
+      setPlayers(updatedPlayers);
     });
 
     socket.on("themeUpdate", (newTheme: string) => {
@@ -82,12 +79,15 @@ export function Game() {
       setTheme(newTheme);
       setSubmitted(false);
       setKeyword("");
-      // カードは残す仕様のまま
     });
 
     socket.on("allSubmittedStatus", (status: boolean) => {
       console.log("allSubmittedStatusイベント受信:", status);
       setAllSubmitted(status);
+    });
+
+    socket.on("removeCard", ({ targetPlayerName }) => {
+      setSubmittedCards((prev) => prev.filter((card) => card.playerName !== targetPlayerName));
     });
 
     return () => {
@@ -169,14 +169,19 @@ export function Game() {
     });
 
     setPokeResult(isCorrect);
-    // しばらくpokeTargetPlayerは残す（アニメーション中は使いたい）
-    setTimeout(() => setPokeTargetPlayer(null), 500); // 0.5秒後に消すなど
+
+    setTimeout(() => setPokeTargetPlayer(null), 500);
 
     if (isCorrect) {
-      setPlayerScores(prev => ({
-        ...prev,
-        [playerName]: (prev[playerName] || 0) + 3,
-      }));
+      socket.emit("pokeResult", {
+        attackerName: playerName,
+        targetName: pokeTargetPlayer,
+        isCorrect,
+      });
+
+      socket.emit("removeCard", {
+        targetPlayerName: pokeTargetPlayer,
+      });
     }
   };
 
@@ -188,14 +193,12 @@ export function Game() {
 
   return (
     <>
-      {/* ヘッダー */}
       <GameHeader
         theme={theme}
         selectedCategory={selectedCategory}
         filterWords={filters[selectedCategory] || []}
       />
 
-      {/* メインカード表示エリア */}
       <SubmittedCardsArea
         cards={submittedCards}
         filters={filters}
@@ -205,15 +208,9 @@ export function Game() {
         pokeResult={pokeResult}
         onPoke={handlePoke}
       />
-      
-      {/* スコアボード */}
-      <ScoreBoard
-        players={players}
-        playerScores={playerScores}
-        currentPlayerName={playerName}
-      />
 
-      {/* 入力エリア */}
+      <ScoreBoard players={players} currentPlayerName={playerName} />
+
       <EntryField
         keyword={keyword}
         onChange={handleInputChange}
