@@ -2,6 +2,7 @@ import { ChangeEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import { SubmittedCard } from "../components/SubmittedCard";
 import filters from "../data/filters.json";
 import themes from "../data/themes.json";
+import { usePlayer } from "../PlayerContext"; // 追加
 
 type SubmittedCardData = {
   text: string;
@@ -10,6 +11,7 @@ type SubmittedCardData = {
 };
 
 export function Game() {
+  const { playerName } = usePlayer(); // ← 名前を取得
   const [theme, setTheme] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<keyof typeof filters | "">("");
   const [keywords, setKeywords] = useState<string[]>([]);
@@ -89,7 +91,7 @@ export function Game() {
     if (keyword.trim() && !error) {
       setSubmittedCards((prev) => [
         ...prev,
-        { text: keyword, playerName: "yourPlayerName", theme }
+        { text: keyword, playerName: playerName || "名無し", theme }
       ]);
       setSubmitted(true);
       setKeyword("");

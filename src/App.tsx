@@ -6,10 +6,7 @@ import { Title } from "./pages/Title";
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<Title onJoin={(n) => {
-        console.log(n);
-        window.location.href = "/game"; // 仮遷移
-      }} />} />  
+      <Route path="/" element={<Title />} />  
       <Route path="/game" element={<Game />} />
     </Routes>
   );

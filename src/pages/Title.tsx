@@ -1,14 +1,16 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; // 追加
+import { useNavigate } from "react-router-dom";
+import { usePlayer } from "../PlayerContext";
 
-export function Title(props: { onJoin: (name: string) => void }) {
+export function Title() {
   const [inputName, setInputName] = useState("");
-  const navigate = useNavigate(); // 追加
+  const { setPlayerName } = usePlayer();
+  const navigate = useNavigate();
 
   const handleJoinClick = () => {
     if (inputName.trim()) {
-      props.onJoin(inputName.trim());
-      navigate("/game"); // ← ここを置き換え
+      setPlayerName(inputName.trim());
+      navigate("/game"); // SPA遷移
     }
   };
 
