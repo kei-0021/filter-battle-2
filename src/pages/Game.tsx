@@ -2,7 +2,6 @@ import { ChangeEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { SubmittedCard } from "../components/SubmittedCard";
 import filters from "../data/filters.json";
-import themes from "../data/themes.json";
 import { usePlayer } from "../PlayerContext";
 
 type SubmittedCardData = {
@@ -29,35 +28,23 @@ export function Game() {
   const [submittedCards, setSubmittedCards] = useState<SubmittedCardData[]>([]);
   const [error, setError] = useState("");
   const [players, setPlayers] = useState<Player[]>([]);
+  const [allSubmitted, setAllSubmitted] = useState(false); // ←追加
 
   const HEADER_HEIGHT = 150;
-  const INPUT_HEIGHT = 120; // 160 → 180に変更してみる
+  const INPUT_HEIGHT = 120;
 
   const cardsContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const initializeGame = () => {
+  // カテゴリ選択は最初だけ
+  useEffect(() => {
     const categories = Object.keys(filters) as (keyof typeof filters)[];
     const randomCategory = categories[Math.floor(Math.random() * categories.length)];
     setSelectedCategory(randomCategory);
     setKeywords(filters[randomCategory]);
-    setKeyword("");
-    setSubmitted(false);
-    setError("");
-  };
-
-  const updateTheme = () => {
-    const randomTheme = themes[Math.floor(Math.random() * themes.length)];
-    setTheme(randomTheme);
-    setKeyword("");
-    setSubmitted(false);
-    setError("");
-  };
+  }, []);
 
   useEffect(() => {
-    initializeGame();
-    updateTheme();
-
     console.log("Socket.IO接続開始...");
     socket = io("http://localhost:3001");
 
@@ -84,7 +71,20 @@ export function Game() {
 
     socket.on("playersUpdate", (updatedPlayers: string[]) => {
       console.log("playersUpdateイベント受信:", updatedPlayers);
-      setPlayers(updatedPlayers.map(name => ({ name })));
+      setPlayers(updatedPlayers.map((name) => ({ name })));
+    });
+
+    socket.on("themeUpdate", (newTheme: string) => {
+      console.log("themeUpdateイベント受信:", newTheme);
+      setTheme(newTheme);
+      setSubmitted(false);
+      setKeyword("");
+      setAllSubmitted(false); // 新テーマなのでリセット
+    });
+
+    socket.on("allSubmittedStatus", (status: boolean) => {
+      console.log("allSubmittedStatusイベント受信:", status);
+      setAllSubmitted(status);
     });
 
     return () => {
@@ -144,9 +144,9 @@ export function Game() {
     }
   };
 
+  // 「次のテーマへ」ボタンは全員提出済みかつ自分が提出済みなら表示・有効化
   const handleNextTheme = () => {
-    updateTheme();
-    setSubmitted(false);
+    socket.emit("nextTheme");
   };
 
   return (
@@ -205,7 +205,7 @@ export function Game() {
         ref={cardsContainerRef}
         style={{
           position: "fixed",
-          top: 0,              // ←ここを0に変更
+          top: 0,
           bottom: INPUT_HEIGHT,
           left: 0,
           right: "200px",
@@ -213,7 +213,7 @@ export function Game() {
           backgroundColor: "#1e1e1e",
           paddingLeft: "2rem",
           paddingRight: "2rem",
-          paddingTop: HEADER_HEIGHT * 1.4, // ヘッダー高さの80%くらい
+          paddingTop: HEADER_HEIGHT * 1.4,
           boxSizing: "border-box",
           zIndex: 50,
         }}
@@ -322,6 +322,7 @@ export function Game() {
           >
             {keyword.length} / 200
           </div>
+
           {!submitted && (
             <button
               onClick={handleSubmit}
@@ -347,14 +348,15 @@ export function Game() {
           {submitted && (
             <button
               onClick={handleNextTheme}
+              disabled={!allSubmitted} // みんな提出済みでないと押せないように
               style={{
                 padding: "0.75rem 1.5rem",
-                backgroundColor: "#007bff",
+                backgroundColor: allSubmitted ? "#007bff" : "#555",
                 color: "#fff",
                 border: "none",
                 borderRadius: "6px",
                 fontSize: "1rem",
-                cursor: "pointer",
+                cursor: allSubmitted ? "pointer" : "not-allowed",
                 whiteSpace: "nowrap",
               }}
             >
