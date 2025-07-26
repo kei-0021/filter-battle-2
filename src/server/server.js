@@ -17,7 +17,7 @@ io.on("connection", (socket) => {
     players.set(socket.id, name);
     console.log(`[JOIN] Player joined: ${name} (socket: ${socket.id})`);
     console.log(`[PLAYERS] Current players: ${Array.from(players.values()).join(", ")}`);
-    io.emit("players", Array.from(players.values()));
+    io.emit("playersUpdate", Array.from(players.values()));
   });
 
   socket.on("submit", (data) => {

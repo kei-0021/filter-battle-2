@@ -11,6 +11,10 @@ type SubmittedCardData = {
   theme: string;
 };
 
+type Player = {
+  name: string;
+};
+
 let socket: Socket;
 
 export function Game() {
@@ -24,14 +28,14 @@ export function Game() {
   const [submitted, setSubmitted] = useState(false);
   const [submittedCards, setSubmittedCards] = useState<SubmittedCardData[]>([]);
   const [error, setError] = useState("");
+  const [players, setPlayers] = useState<Player[]>([]);
 
   const HEADER_HEIGHT = 150;
-  const INPUT_HEIGHT = 160;
+  const INPUT_HEIGHT = 120; // 160 → 180に変更してみる
 
   const cardsContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // 初期カテゴリー＆テーマ設定
   const initializeGame = () => {
     const categories = Object.keys(filters) as (keyof typeof filters)[];
     const randomCategory = categories[Math.floor(Math.random() * categories.length)];
@@ -76,6 +80,11 @@ export function Game() {
     socket.on("newSubmission", (data: SubmittedCardData) => {
       console.log("newSubmissionイベント受信:", data);
       setSubmittedCards((prev) => [...prev, data]);
+    });
+
+    socket.on("playersUpdate", (updatedPlayers: string[]) => {
+      console.log("playersUpdateイベント受信:", updatedPlayers);
+      setPlayers(updatedPlayers.map(name => ({ name })));
     });
 
     return () => {
@@ -142,12 +151,13 @@ export function Game() {
 
   return (
     <>
+      {/* ヘッダー */}
       <div
         style={{
           position: "fixed",
           top: 0,
           left: 0,
-          right: 0,
+          right: "200px",
           height: HEADER_HEIGHT,
           background: "#1e1e1e",
           color: "#f5f5f5",
@@ -190,19 +200,22 @@ export function Game() {
         </div>
       </div>
 
+      {/* メインカード表示エリア */}
       <div
         ref={cardsContainerRef}
         style={{
-          paddingTop: HEADER_HEIGHT + 60,
-          paddingBottom: INPUT_HEIGHT + 40,
-          height: `calc(100vh - ${HEADER_HEIGHT + INPUT_HEIGHT + 100}px)`,
+          position: "fixed",
+          top: 0,              // ←ここを0に変更
+          bottom: INPUT_HEIGHT,
+          left: 0,
+          right: "200px",
           overflowY: submittedCards.length > 0 ? "auto" : "hidden",
           backgroundColor: "#1e1e1e",
           paddingLeft: "2rem",
           paddingRight: "2rem",
-          display: "block",
-          margin: "0 auto",
-          maxHeight: `calc(100vh - ${HEADER_HEIGHT}px - ${INPUT_HEIGHT + 40}px)`,
+          paddingTop: HEADER_HEIGHT * 1.4, // ヘッダー高さの80%くらい
+          boxSizing: "border-box",
+          zIndex: 50,
         }}
       >
         {submittedCards.map((card, index) => (
@@ -219,12 +232,48 @@ export function Game() {
         ))}
       </div>
 
+      {/* 右サイド プレイヤー一覧 */}
+      <div
+        style={{
+          position: "fixed",
+          top: HEADER_HEIGHT,
+          right: 0,
+          width: "200px",
+          height: `calc(100vh - ${HEADER_HEIGHT}px)`,
+          backgroundColor: "#222",
+          color: "#eee",
+          padding: "1rem",
+          overflowY: "auto",
+          boxShadow: "-2px 0 8px rgba(0,0,0,0.7)",
+          userSelect: "none",
+          zIndex: 100,
+        }}
+      >
+        <h3 style={{ marginTop: 0 }}>プレイヤー一覧</h3>
+        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+          {players.length === 0 && <li>参加者なし</li>}
+          {players.map((player, idx) => (
+            <li
+              key={idx}
+              style={{
+                padding: "0.25rem 0",
+                borderBottom: "1px solid #444",
+                fontWeight: player.name === playerName ? "bold" : "normal",
+              }}
+            >
+              {player.name}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* 入力エリア */}
       <div
         style={{
           position: "fixed",
           bottom: 0,
           left: 0,
-          right: 0,
+          right: "200px",
           height: INPUT_HEIGHT,
           background: "#1e1e1e",
           padding: "1rem 2rem",
@@ -238,6 +287,7 @@ export function Game() {
           boxSizing: "border-box",
           gap: "0.3rem",
           userSelect: "none",
+          zIndex: 100,
         }}
       >
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
