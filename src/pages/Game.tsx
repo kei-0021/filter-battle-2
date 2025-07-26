@@ -1,21 +1,15 @@
+// Game.tsx
 import { ChangeEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
+import { EntryField } from "../components/EntryField";
+import { GameHeader } from "../components/GameHeader";
 import { PokeInputPopup } from "../components/PokeInputPopup";
 import { ResultPopup } from "../components/ResultPopup";
-import { SubmittedCard } from "../components/SubmittedCard";
+import { ScoreBoard } from "../components/ScoreBoard";
+import { SubmittedCardsArea } from "../components/SubmittedCardsArea";
 import filters from "../data/filters.json";
 import { usePlayer } from "../PlayerContext";
-
-type SubmittedCardData = {
-  text: string;
-  playerName: string;
-  theme: string;
-  filterCategory: keyof typeof filters;
-};
-
-type Player = {
-  name: string;
-};
+import { Player, SubmittedCardData } from "../types/gameTypes";
 
 let socket: Socket;
 
@@ -186,7 +180,6 @@ export function Game() {
     }
   };
 
-
   const handlePoke = (targetPlayerName: string) => {
     setPokeTargetPlayer(targetPlayerName);
   };
@@ -196,241 +189,43 @@ export function Game() {
   return (
     <>
       {/* ヘッダー */}
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: "200px",
-          height: HEADER_HEIGHT,
-          background: "#1e1e1e",
-          color: "#f5f5f5",
-          padding: "1rem 2rem",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.7)",
-          zIndex: 100,
-          display: "flex",
-          flexDirection: "column",
-          userSelect: "none",
-          overflowY: "auto",
-        }}
-      >
-        <div style={{ marginBottom: "0.5rem" }}>
-          <h1 style={{ fontSize: "1.8rem", margin: 0 }}>
-            お題: <span style={{ color: "#ff6b6b" }}>{theme}</span>
-          </h1>
-          <h2 style={{ fontSize: "1rem", margin: 0, color: "#6bcfff" }}>
-            あなたのフィルター: {selectedCategory}
-          </h2>
-        </div>
-
-        <div
-          style={{
-            width: "1000px",
-            backgroundColor: "#333",
-            padding: "0.5rem 1rem",
-            borderRadius: "8px",
-            color: "#fff",
-            fontSize: "0.85rem",
-            lineHeight: 1.4,
-            maxHeight: "6rem",
-            overflowY: "auto",
-            userSelect: "none",
-            marginBottom: "0.5rem",
-            whiteSpace: "normal",
-            wordWrap: "break-word",
-          }}
-        >
-          {filters[selectedCategory]?.join(", ")}
-        </div>
-      </div>
+      <GameHeader
+        theme={theme}
+        selectedCategory={selectedCategory}
+        filterWords={filters[selectedCategory] || []}
+      />
 
       {/* メインカード表示エリア */}
-      <div
-        ref={cardsContainerRef}
-        style={{
-          position: "fixed",
-          top: 0,
-          bottom: INPUT_HEIGHT,
-          left: 0,
-          right: "200px",
-          overflowY: submittedCards.length > 0 ? "auto" : "hidden",
-          backgroundColor: "#1e1e1e",
-          paddingLeft: "2rem",
-          paddingRight: "2rem",
-          paddingTop: HEADER_HEIGHT * 1.4,
-          boxSizing: "border-box",
-          zIndex: 50,
-        }}
-      >
-        {cardsToShow.map((card, index) => {
-          const isLatestCardForPlayer =
-            cardsToShow.filter((c) => c.playerName === card.playerName).at(-1) === card;
-
-          // 今つつき対象のカードかどうかを判定
-          const isPopped = pokeResult === true && pokeTargetPlayer === card.playerName;
-
-          return (
-            <div key={`${card.playerName}-${index}`} style={{ marginBottom: "1rem" }}>
-              <SubmittedCard
-                text={card.text}
-                theme={card.theme}
-                playerName={card.playerName}
-                filterKeywords={filters[selectedCategory] || []}
-                showPokeButton={card.playerName !== playerName && isLatestCardForPlayer}
-                useBubbleStyle={true}
-                pokeResult={isPopped ? true : null} // ここが重要
-                onPoke={() => handlePoke(card.playerName)}
-              />
-            </div>
-          );
-        })}
-
-      </div>
-
-      {/* 右サイド 参加者一覧 */}
-      <div
-        style={{
-          position: "fixed",
-          top: HEADER_HEIGHT,
-          right: 0,
-          width: "200px",
-          height: `calc(100vh - ${HEADER_HEIGHT}px)`,
-          backgroundColor: "#222",
-          color: "#eee",
-          padding: "1rem",
-          overflowY: "auto",
-          boxShadow: "-2px 0 8px rgba(0,0,0,0.7)",
-          userSelect: "none",
-          zIndex: 100,
-        }}
-      >
-        <h3 style={{ marginTop: 0 }}>プレイヤーリスト</h3>
-        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-          {players.length === 0 && <li>参加者なし</li>}
-          {players.map((player, idx) => {
-            const score = playerScores[player.name] || 0;
-            const isMe = player.name === playerName;
-
-            return (
-              <li
-                key={idx}
-                style={{
-                  padding: "0.25rem 0",
-                  borderBottom: "1px solid #444",
-                  fontWeight: isMe ? "bold" : "normal",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  color: isMe ? "#00ff99" : "#eee",
-                  backgroundColor: isMe ? "#003300" : "transparent",
-                  borderRadius: isMe ? "4px" : undefined,
-                  transition: "background-color 0.3s ease",
-                }}
-              >
-                <span>{player.name}</span>
-                <span>{score}点</span>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+      <SubmittedCardsArea
+        cards={submittedCards}
+        filters={filters}
+        selectedCategory={selectedCategory}
+        playerName={playerName}
+        pokeTargetPlayer={pokeTargetPlayer}
+        pokeResult={pokeResult}
+        onPoke={handlePoke}
+      />
+      
+      {/* スコアボード */}
+      <ScoreBoard
+        players={players}
+        playerScores={playerScores}
+        currentPlayerName={playerName}
+      />
 
       {/* 入力エリア */}
-      <div
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: "200px",
-          height: INPUT_HEIGHT,
-          background: "#1e1e1e",
-          padding: "1rem 2rem",
-          boxShadow: "0 -2px 8px rgba(0,0,0,0.7)",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          maxWidth: "700px",
-          margin: "0 auto",
-          width: "100%",
-          boxSizing: "border-box",
-          gap: "0.3rem",
-          userSelect: "none",
-          zIndex: 100,
-        }}
-      >
-        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          <input
-            ref={inputRef}
-            type="text"
-            value={keyword}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            onCompositionStart={handleCompositionStart}
-            onCompositionEnd={handleCompositionEnd}
-            placeholder="回答を記入"
-            style={{
-              flex: 1,
-              padding: "0.75rem 1rem",
-              fontSize: "1.1rem",
-              borderRadius: "6px",
-              border: "none",
-              outline: "none",
-              backgroundColor: "#333",
-              color: "#fff",
-            }}
-            disabled={submitted}
-          />
-          <div
-            style={{
-              color: "#aaa",
-              fontSize: "0.9rem",
-              marginTop: "0.2rem",
-              textAlign: "right",
-            }}
-          >
-            {keyword.length} / 200
-          </div>
-          {!submitted && (
-            <button
-              onClick={handleSubmit}
-              disabled={!keyword.trim() || !!error || submitted}
-              style={{
-                padding: "0.75rem 1.5rem",
-                fontSize: "1.1rem",
-                borderRadius: "6px",
-                border: "none",
-                backgroundColor:
-                  !keyword.trim() || !!error || submitted ? "#888" : "#6bffb0",
-                color: "#000",
-                cursor:
-                  !keyword.trim() || !!error || submitted
-                    ? "not-allowed"
-                    : "pointer",
-                whiteSpace: "nowrap",
-              }}
-            >
-              提出
-            </button>
-          )}
-          {submitted && (
-            <button
-              onClick={handleNextTheme}
-              disabled={!allSubmitted}
-              style={{
-                padding: "0.75rem 1.5rem",
-                backgroundColor: allSubmitted ? "#007bff" : "#555",
-                color: "#fff",
-                border: "none",
-                borderRadius: "6px",
-                fontSize: "1rem",
-                cursor: allSubmitted ? "pointer" : "not-allowed",
-                whiteSpace: "nowrap",
-              }}
-            >
-              次のテーマへ
-            </button>
-          )}
-        </div>
-      </div>
+      <EntryField
+        keyword={keyword}
+        onChange={handleInputChange}
+        onKeyDown={handleKeyDown}
+        onSubmit={handleSubmit}
+        onNextTheme={handleNextTheme}
+        error={error}
+        submitted={submitted}
+        allSubmitted={allSubmitted}
+        inputRef={inputRef}
+        inputHeight={INPUT_HEIGHT}
+      />
 
       <PokeInputPopup
         targetPlayerName={pokeTargetPlayer}

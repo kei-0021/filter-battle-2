@@ -97,6 +97,21 @@
   white-space: normal;
 }
 
+@keyframes slideInFromRight {
+  0% {
+    transform: translateX(120vw); /* 少し遠くから */
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.slide-in {
+  animation: slideInFromRight 1.8s cubic-bezier(0.22, 1, 0.36, 1) forwards; /* ゆったり感のあるイージング */
+}
+
 @keyframes bubblePop {
   0% {
     transform: scale(1);

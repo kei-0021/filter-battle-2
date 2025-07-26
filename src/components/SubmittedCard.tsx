@@ -73,12 +73,9 @@ export function SubmittedCard({
       ref={cardRef}
       className={`${useBubbleStyle ? "bubble-style" : ""} ${
         isPopped ? "bubble-pop" : ""
-      }`}
+      } slide-in`}
       style={{
         fontSize: `${fontSize}px`,
-        transform: visible ? "translateX(0)" : "translateX(100vw)",
-        opacity: visible ? 1 : 0,
-        transition: "transform 0.4s ease-out, opacity 0.4s ease-out",
         padding: !useBubbleStyle ? "1rem" : undefined,
       }}
     >
