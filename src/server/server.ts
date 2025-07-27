@@ -1,9 +1,14 @@
-import { SCORE_CORRECTLY_POKE, SCORE_CORRECTLY_POKED } from "../constants.js";
-
 import express from "express";
 import http from "http";
+import path from "path";
 import { Server } from "socket.io";
+import { fileURLToPath } from "url";
+import { SCORE_CORRECTLY_POKE, SCORE_CORRECTLY_POKED } from "../constants.js";
 import themes from "../data/themes.json" with { type: "json" };
+
+// __dirname 相当 (ESM対応)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
@@ -11,6 +16,13 @@ const io = new Server(server, {
   cors: { origin: "*" },
 });
 
+// フロントエンド（dist）の静的ファイル配信
+app.use(express.static(path.join(__dirname, "../../dist")));
+app.get("*", (_, res) => {
+  res.sendFile(path.join(__dirname, "../../dist/index.html"));
+});
+
+// Socket.IO ロジック
 const players = new Map(); // socket.id => { name, score }
 const submissionsCount = new Map(); // socket.id => boolean
 let currentTheme = null;
@@ -26,7 +38,7 @@ const broadcastPlayers = () => {
 };
 
 io.on("connection", (socket) => {
-  console.log(`[CONNECT] Socket connected: ${socket.id}`);
+  console.log(`[CONNECT] ${socket.id}`);
   submissionsCount.set(socket.id, false);
 
   socket.on("join", (name) => {
@@ -35,7 +47,7 @@ io.on("connection", (socket) => {
     }
     submissionsCount.set(socket.id, false);
 
-    console.log(`[JOIN] ${name} (socket: ${socket.id})`);
+    console.log(`[JOIN] ${name} (${socket.id})`);
     if (!currentTheme) currentTheme = chooseRandomTheme();
 
     broadcastPlayers();
@@ -55,8 +67,12 @@ io.on("connection", (socket) => {
 
   socket.on("pokeResult", ({ attackerName, targetName, isCorrect }) => {
     for (const player of players.values()) {
-      if (player.name === attackerName && isCorrect) player.score += SCORE_CORRECTLY_POKE;
-      if (player.name === targetName && isCorrect) player.score -= SCORE_CORRECTLY_POKED;
+      if (player.name === attackerName && isCorrect) {
+        player.score += SCORE_CORRECTLY_POKE;
+      }
+      if (player.name === targetName && isCorrect) {
+        player.score -= SCORE_CORRECTLY_POKED;
+      }
     }
     broadcastPlayers();
   });
@@ -78,7 +94,7 @@ io.on("connection", (socket) => {
     const player = players.get(socket.id);
     players.delete(socket.id);
     submissionsCount.delete(socket.id);
-    console.log(`[DISCONNECT] ${player?.name || "unknown"} (socket: ${socket.id})`);
+    console.log(`[DISCONNECT] ${player?.name || "unknown"} (${socket.id})`);
     broadcastPlayers();
 
     const allSubmitted = [...submissionsCount.values()].every(Boolean);
@@ -86,6 +102,8 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(3001, () => {
-  console.log("Socket.IO server running on port 3001");
+// Render環境では PORT を必ず環境変数から取る
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });

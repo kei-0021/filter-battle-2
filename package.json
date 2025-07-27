@@ -27,12 +27,5 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "vite": "^7.0.5"
-  },
-  "compilerOptions": {
-    "moduleResolution": "nodenext",
-    "module": "esnext",
-    "target": "es2022",
-    "lib": ["dom", "es2022"],
-    "jsx": "react-jsx"
   }
 }
