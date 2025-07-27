@@ -3,6 +3,7 @@ import { EntryField } from "../components/EntryField.js";
 import { GameHeader } from "../components/GameHeader.js";
 import { PokeInputPopup } from "../components/PokeInputPopup.js";
 import { ResultPopup } from "../components/ResultPopup.js";
+import { RuleButton, RuleModal } from "../components/RuleModal.js";
 import { ScoreBoard } from "../components/ScoreBoard.js";
 import { SubmittedCardsArea } from "../components/SubmittedCardsArea.js";
 import { Timer } from "../components/Timer.js";
@@ -33,6 +34,9 @@ export function Game() {
   const [playerCount, setPlayerCount] = useState(0);
   const [timerResetTrigger, setTimerResetTrigger] = useState(0);
   const hasJoinedRef = useRef(false); // ★追加: 既にjoinイベントを送ったかを管理するref
+
+  // ルールモーダル開閉用state
+  const [isRuleOpen, setIsRuleOpen] = useState(false);
 
   const HEADER_HEIGHT = 150;
   const INPUT_HEIGHT = 120;
@@ -281,6 +285,12 @@ export function Game() {
       />
 
       <ResultPopup result={pokeResult} onClose={closePopup} />
+
+      {/* ルールボタン */}
+      <RuleButton onClick={() => setIsRuleOpen(true)} />
+      
+      {/* ルールモーダル */}
+      <RuleModal open={isRuleOpen} onClose={() => setIsRuleOpen(false)} />
     </>
   );
 }
