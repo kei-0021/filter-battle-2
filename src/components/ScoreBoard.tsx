@@ -1,5 +1,5 @@
 import React from "react";
-import { Player } from "../types/gameTypes";
+import { Player } from "../types/gameTypes.js";
 
 type ScoreBoardProps = {
   players: Player[];

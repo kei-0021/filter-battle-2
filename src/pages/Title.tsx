@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { usePlayer } from "../PlayerContext";
+import { usePlayer } from "../PlayerContext.js";
 
 export function Title() {
   const [inputName, setInputName] = useState("");

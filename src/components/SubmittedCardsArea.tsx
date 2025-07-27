@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
-import { SubmittedCard } from "../components/SubmittedCard";
-import filters from "../data/filters.json";
-import { SubmittedCardData } from "../types/gameTypes";
+import { SubmittedCard } from "../components/SubmittedCard.js";
+import filters from "../data/filters.json" with { type: "json" };
+import { SubmittedCardData } from "../types/gameTypes.js";
 
 type SubmittedCardsAreaProps = {
   cards: SubmittedCardData[];

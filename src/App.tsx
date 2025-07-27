@@ -1,7 +1,7 @@
 // App.tsx
 import { Route, Routes } from "react-router-dom";
-import { Game } from "./pages/Game";
-import { Title } from "./pages/Title";
+import { Game } from "./pages/Game.js";
+import { Title } from "./pages/Title.js";
 
 function App() {
   return (

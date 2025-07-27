@@ -1,15 +1,15 @@
 {
   "name": "filter-battle-2",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "type": "module",
   "scripts": {
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
-    "dev:frontend": "vite --host",
-    "dev:backend": "node src/server/server.js"
+    "dev": "vite --host",
+    "build": "tsc --outDir dist-server && vite build",
+    "preview": "vite preview",
+    "server": "ts-node src/server/server.ts",
+    "start": "node dist-server/server/server.js",
+    "start:dev": "concurrently \"npm run server\" \"npm run dev\""
   },
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "express": "^5.1.0",
     "react": "^19.1.0",
@@ -19,8 +19,20 @@
     "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
-    "concurrently": "^9.2.0",
+    "@types/express": "^5.0.3",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.6.0",
+    "concurrently": "^8.2.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3",
     "vite": "^7.0.5"
   },
-  "keywords": []
+  "compilerOptions": {
+    "moduleResolution": "nodenext",
+    "module": "esnext",
+    "target": "es2022",
+    "lib": ["dom", "es2022"],
+    "jsx": "react-jsx"
+  }
 }

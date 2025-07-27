@@ -1,17 +1,17 @@
 // Game.tsx
 import { ChangeEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
-import { EntryField } from "../components/EntryField";
-import { GameHeader } from "../components/GameHeader";
-import { PokeInputPopup } from "../components/PokeInputPopup";
-import { ResultPopup } from "../components/ResultPopup";
-import { ScoreBoard } from "../components/ScoreBoard";
-import { SubmittedCardsArea } from "../components/SubmittedCardsArea";
-import { Timer } from "../components/Timer";
-import { SUBMISSION_TIME_LIMIT } from "../constants";
-import filters from "../data/filters.json";
-import { usePlayer } from "../PlayerContext";
-import { Player, SubmittedCardData } from "../types/gameTypes";
+import { EntryField } from "../components/EntryField.js";
+import { GameHeader } from "../components/GameHeader.js";
+import { PokeInputPopup } from "../components/PokeInputPopup.js";
+import { ResultPopup } from "../components/ResultPopup.js";
+import { ScoreBoard } from "../components/ScoreBoard.js";
+import { SubmittedCardsArea } from "../components/SubmittedCardsArea.js";
+import { Timer } from "../components/Timer.js";
+import { SUBMISSION_TIME_LIMIT } from "../constants.js";
+import filters from "../data/filters.json" with { type: "json" };
+import { usePlayer } from "../PlayerContext.js";
+import { Player, SubmittedCardData } from "../types/gameTypes.js";
 
 let socket: Socket;
 
