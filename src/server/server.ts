@@ -6,23 +6,36 @@ import { fileURLToPath } from "url";
 import { SCORE_CORRECTLY_POKE, SCORE_CORRECTLY_POKED } from "../constants.js";
 import themes from "../data/themes.json" with { type: "json" };
 
-// __dirname 相当 (ESM対応)
+// ESM環境で __dirname 取得
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
+
+// CORS制限（必要に応じてURLを編集してください）
+const allowedOrigins = [
+  "https://filter-battle-2.onrender.com",
+  "http://localhost:5173",
+];
+
 const io = new Server(server, {
-  cors: { origin: "*" },
+  cors: {
+    origin: allowedOrigins,
+    credentials: true,
+  },
 });
 
-// フロントエンド（dist）の静的ファイル配信
-app.use(express.static(path.join(__dirname, "../../dist")));
+// 静的ファイルの提供（Viteのビルド成果物が../../distにある想定）
+const distPath = path.join(__dirname, "../../dist");
+app.use(express.static(distPath));
+
+// SPA対応: 全てのGETリクエストにindex.html返す
 app.get("*", (_, res) => {
-  res.sendFile(path.join(__dirname, "../../dist/index.html"));
+  res.sendFile(path.join(distPath, "index.html"));
 });
 
-// Socket.IO ロジック
+// Socket.IOロジック
 const players = new Map(); // socket.id => { name, score }
 const submissionsCount = new Map(); // socket.id => boolean
 let currentTheme = null;
@@ -102,7 +115,7 @@ io.on("connection", (socket) => {
   });
 });
 
-// Render環境では PORT を必ず環境変数から取る
+// Render環境で必ずPORTを使う
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
