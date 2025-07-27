@@ -1,6 +1,6 @@
 import { SCORE_CORRECTLY_POKE, SCORE_CORRECTLY_POKED } from "../constants.js";
 
-const express = require("express");
+import express from "express";
 const http = require("http");
 const { Server } = require("socket.io");
 const themes = require("../data/themes.json");
