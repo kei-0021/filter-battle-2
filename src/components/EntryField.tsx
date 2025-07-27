@@ -11,6 +11,8 @@ type EntryFieldProps = {
   allSubmitted: boolean;
   inputRef: React.RefObject<HTMLInputElement>;
   inputHeight: number;
+  onCompositionStart: () => void;
+  onCompositionEnd: () => void;
 };
 
 export const EntryField: React.FC<EntryFieldProps> = ({
@@ -24,6 +26,8 @@ export const EntryField: React.FC<EntryFieldProps> = ({
   allSubmitted,
   inputRef,
   inputHeight,
+  onCompositionStart,
+  onCompositionEnd,
 }) => {
   return (
     <div
@@ -55,6 +59,8 @@ export const EntryField: React.FC<EntryFieldProps> = ({
           value={keyword}
           onChange={onChange}
           onKeyDown={onKeyDown}
+          onCompositionStart={onCompositionStart}
+          onCompositionEnd={onCompositionEnd}
           placeholder="回答を記入"
           style={{
             flex: 1,

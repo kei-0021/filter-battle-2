@@ -53,8 +53,8 @@ io.on("connection", (socket) => {
 
   socket.on("pokeResult", ({ attackerName, targetName, isCorrect }) => {
     for (const player of players.values()) {
-      if (player.name === attackerName && isCorrect) player.score += 3;
-      if (player.name === targetName && isCorrect) player.score -= 1;
+      if (player.name === attackerName && isCorrect) player.score += SCORE_CORRECTLY_POKE;
+      if (player.name === targetName && isCorrect) player.score -= SCORE_CORRECTLY_POKED;
     }
     broadcastPlayers();
   });

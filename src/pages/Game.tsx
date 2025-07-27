@@ -7,6 +7,8 @@ import { PokeInputPopup } from "../components/PokeInputPopup";
 import { ResultPopup } from "../components/ResultPopup";
 import { ScoreBoard } from "../components/ScoreBoard";
 import { SubmittedCardsArea } from "../components/SubmittedCardsArea";
+import { Timer } from "../components/Timer";
+import { SUBMISSION_TIME_LIMIT } from "../constants";
 import filters from "../data/filters.json";
 import { usePlayer } from "../PlayerContext";
 import { Player, SubmittedCardData } from "../types/gameTypes";
@@ -29,6 +31,9 @@ export function Game() {
 
   const [pokeTargetPlayer, setPokeTargetPlayer] = useState<string | null>(null);
   const [pokeResult, setPokeResult] = useState<boolean | null>(null);
+
+  const [playerCount, setPlayerCount] = useState(0);
+  const [timerResetTrigger, setTimerResetTrigger] = useState(0);
 
   const HEADER_HEIGHT = 150;
   const INPUT_HEIGHT = 120;
@@ -72,6 +77,10 @@ export function Game() {
     socket.on("playersUpdate", (updatedPlayers: { name: string; score: number }[]) => {
       console.log("playersUpdateイベント受信:", updatedPlayers);
       setPlayers(updatedPlayers);
+      if (updatedPlayers.length > playerCount) {
+        setTimerResetTrigger((prev) => prev + 1); // リセットトリガー更新
+      }
+      setPlayerCount(updatedPlayers.length);
     });
 
     socket.on("themeUpdate", (newTheme: string) => {
@@ -133,18 +142,26 @@ export function Game() {
     }
   };
 
-  const handleSubmit = () => {
-    if (keyword.trim() && !error) {
-      const newCard = {
-        text: keyword,
-        playerName: playerName || "名無し",
-        theme,
-        filterCategory: selectedCategory,
-      };
-      console.log("submitイベント送信:", newCard);
-      socket.emit("submit", newCard);
-      setSubmitted(true);
-      setKeyword("");
+  const handleSubmit = (allowEmpty = false) => {
+    if ((!allowEmpty && !keyword.trim()) || error) {
+      return; // 通常時は空文字禁止、エラーあれば禁止
+    }
+
+    const newCard = {
+      text: keyword,
+      playerName: playerName || "名無し",
+      theme,
+      filterCategory: selectedCategory,
+    };
+    console.log("submitイベント送信:", newCard);
+    socket.emit("submit", newCard);
+    setSubmitted(true);
+    setKeyword("");
+  };
+
+  const handleTimeUp = () => {
+    if (!submitted) {
+      handleSubmit(true); // 空文字OK
     }
   };
 
@@ -199,6 +216,13 @@ export function Game() {
         filterWords={filters[selectedCategory] || []}
       />
 
+      <Timer
+        duration={SUBMISSION_TIME_LIMIT}
+        onTimeUp={handleTimeUp}
+        resetTrigger={timerResetTrigger}  // ← ここを修正
+        isActive={!submitted && !allSubmitted}
+      />
+
       <SubmittedCardsArea
         cards={submittedCards}
         filters={filters}
@@ -222,6 +246,8 @@ export function Game() {
         allSubmitted={allSubmitted}
         inputRef={inputRef}
         inputHeight={INPUT_HEIGHT}
+        onCompositionStart={handleCompositionStart}
+        onCompositionEnd={handleCompositionEnd}
       />
 
       <PokeInputPopup
