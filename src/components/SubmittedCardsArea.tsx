@@ -67,7 +67,7 @@ export const SubmittedCardsArea: React.FC<SubmittedCardsAreaProps> = ({
               text={card.text}
               theme={card.theme}
               playerName={card.playerName}
-              filterKeywords={filters[selectedCategory] || []}
+              filterKeywords={selectedCategory ? filters[selectedCategory] : []}
               showPokeButton={card.playerName !== playerName && isLatestCardForPlayer}
               useBubbleStyle={true}
               pokeResult={isPopped ? true : null}

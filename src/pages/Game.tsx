@@ -1,6 +1,4 @@
-// Game.tsx
 import { ChangeEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
-import { io, Socket } from "socket.io-client";
 import { EntryField } from "../components/EntryField.js";
 import { GameHeader } from "../components/GameHeader.js";
 import { PokeInputPopup } from "../components/PokeInputPopup.js";
@@ -11,12 +9,12 @@ import { Timer } from "../components/Timer.js";
 import { SUBMISSION_TIME_LIMIT } from "../constants.js";
 import filters from "../data/filters.json" with { type: "json" };
 import { usePlayer } from "../PlayerContext.js";
+import { useSocket } from "../SocketContext.js";
 import { Player, SubmittedCardData } from "../types/gameTypes.js";
-
-let socket: Socket;
 
 export function Game() {
   const { playerName } = usePlayer();
+  const socket = useSocket();
 
   const [theme, setTheme] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<keyof typeof filters | "">("");
@@ -34,6 +32,7 @@ export function Game() {
 
   const [playerCount, setPlayerCount] = useState(0);
   const [timerResetTrigger, setTimerResetTrigger] = useState(0);
+  const hasJoinedRef = useRef(false); // ★追加: 既にjoinイベントを送ったかを管理するref
 
   const HEADER_HEIGHT = 150;
   const INPUT_HEIGHT = 120;
@@ -50,60 +49,85 @@ export function Game() {
     setKeywords(filters[randomCategory]);
   }, []);
 
+  // Socket.IOイベントリスナー設定
   useEffect(() => {
     console.log("Socket.IO接続開始...");
-    socket = io("http://localhost:3001");
 
-    socket.on("connect", () => {
+    const handleConnect = () => {
       console.log("Socket.IO connected, id:", socket.id);
-      if (playerName) {
-        socket.emit("join", playerName);
-        console.log("joinイベント送信:", playerName);
-      }
-    });
+      // ここではjoinは送らず、後続のuseEffectでplayerNameが確定した時に送る
+    };
 
-    socket.on("disconnect", (reason) => {
+    const handleDisconnect = (reason: string) => {
       console.log("Socket.IO disconnected:", reason);
-    });
+      hasJoinedRef.current = false; // ★追加: 切断されたらフラグをリセット
+    };
 
-    socket.on("connect_error", (err) => {
+    const handleConnectError = (err: Error) => {
       console.error("Socket.IO connect_error:", err);
-    });
+    };
 
-    socket.on("newSubmission", (data: SubmittedCardData) => {
+    const handleNewSubmission = (data: SubmittedCardData) => {
       setSubmittedCards((prev) => [...prev, data]);
-    });
+    };
 
-    socket.on("playersUpdate", (updatedPlayers: { name: string; score: number }[]) => {
+    const handlePlayersUpdate = (updatedPlayers: Player[]) => {
       console.log("playersUpdateイベント受信:", updatedPlayers);
       setPlayers(updatedPlayers);
-      if (updatedPlayers.length > playerCount) {
-        setTimerResetTrigger((prev) => prev + 1); // リセットトリガー更新
+      // プレイヤー数が変わった時だけでなく、ゲーム開始（初回テーマ受信）時もリセットを考慮する
+      if (updatedPlayers.length !== playerCount) { // ★修正: プレイヤー数が変わったらリセット
+        setTimerResetTrigger((prev) => prev + 1);
       }
       setPlayerCount(updatedPlayers.length);
-    });
+    };
 
-    socket.on("themeUpdate", (newTheme: string) => {
+    const handleThemeUpdate = (newTheme: string) => {
       console.log("themeUpdateイベント受信:", newTheme);
       setTheme(newTheme);
       setSubmitted(false);
       setKeyword("");
-    });
+      setTimerResetTrigger((prev) => prev + 1); // ★追加: 新しいテーマが来た時もタイマーをリセット
+    };
 
-    socket.on("allSubmittedStatus", (status: boolean) => {
+    const handleAllSubmittedStatus = (status: boolean) => {
       console.log("allSubmittedStatusイベント受信:", status);
       setAllSubmitted(status);
-    });
+    };
 
-    socket.on("removeCard", ({ targetPlayerName }) => {
+    const handleRemoveCard = ({ targetPlayerName }: { targetPlayerName: string }) => {
       setSubmittedCards((prev) => prev.filter((card) => card.playerName !== targetPlayerName));
-    });
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleConnectError);
+    socket.on("newSubmission", handleNewSubmission);
+    socket.on("playersUpdate", handlePlayersUpdate);
+    socket.on("themeUpdate", handleThemeUpdate);
+    socket.on("allSubmittedStatus", handleAllSubmittedStatus);
+    socket.on("removeCard", handleRemoveCard);
 
     return () => {
-      console.log("Socket.IO切断");
-      socket.disconnect();
+      console.log("Gameコンポーネント: Socket.IOイベントリスナーを解除");
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleConnectError);
+      socket.off("newSubmission", handleNewSubmission);
+      socket.off("playersUpdate", handlePlayersUpdate);
+      socket.off("themeUpdate", handleThemeUpdate);
+      socket.off("allSubmittedStatus", handleAllSubmittedStatus);
+      socket.off("removeCard", handleRemoveCard);
     };
-  }, [playerName]);
+  }, [socket, playerCount]);
+
+  // playerNameが設定され、ソケットが接続されており、かつまだjoinイベントを送っていない場合のみjoinイベントを送信
+  useEffect(() => {
+    if (playerName && socket.connected && !hasJoinedRef.current) { // ★修正: hasJoinedRef.currentを追加
+      console.log("joinイベント送信: PlayerNameが設定されたため:", playerName);
+      socket.emit("join", playerName);
+      hasJoinedRef.current = true; // ★追加: joinイベント送信後にフラグを設定
+    }
+  }, [playerName, socket.connected]);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -144,7 +168,7 @@ export function Game() {
 
   const handleSubmit = (allowEmpty = false) => {
     if ((!allowEmpty && !keyword.trim()) || error) {
-      return; // 通常時は空文字禁止、エラーあれば禁止
+      return;
     }
 
     const newCard = {
@@ -161,7 +185,7 @@ export function Game() {
 
   const handleTimeUp = () => {
     if (!submitted) {
-      handleSubmit(true); // 空文字OK
+      handleSubmit(true);
     }
   };
 
@@ -213,18 +237,18 @@ export function Game() {
       <GameHeader
         theme={theme}
         selectedCategory={selectedCategory}
-        filterWords={filters[selectedCategory] || []}
+        filterWords={selectedCategory ? filters[selectedCategory] : []}
       />
 
       <Timer
         duration={SUBMISSION_TIME_LIMIT}
         onTimeUp={handleTimeUp}
-        resetTrigger={timerResetTrigger}  // ← ここを修正
+        resetTrigger={timerResetTrigger}
         isActive={!submitted && !allSubmitted}
       />
 
       <SubmittedCardsArea
-        cards={submittedCards}
+        cards={cardsToShow}
         filters={filters}
         selectedCategory={selectedCategory}
         playerName={playerName}

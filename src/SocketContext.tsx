@@ -1,19 +1,19 @@
 import { createContext, ReactNode, useContext } from "react";
 import { io, Socket } from "socket.io-client";
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:3001";
+const SOCKET_URL = import.meta.env.PROD
+  ? import.meta.env.VITE_SOCKET_URL
+  : "http://localhost:3000";
+
+console.log("Socket URL:", SOCKET_URL);
 
 export const socket = io(SOCKET_URL, {
-  transports: ['websocket'], // WebSocketのみを強制
-  upgrade: false // これを設定すると、まずポーリングを試さず直接WebSocketへ
+  withCredentials: true,
 });
 
 const SocketContext = createContext<Socket | null>(null);
 
 export const SocketProvider = ({ children }: { children: ReactNode }) => {
-  // socketは初回のみ作るが、ここはモジュールスコープのものを使う方が良い場合もある
-  // const socket = useMemo(() => io(SOCKET_URL, { transports: ["websocket"] }), []);
-
   return (
     <SocketContext.Provider value={socket}>
       {children}
@@ -23,6 +23,8 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
 
 export const useSocket = () => {
   const context = useContext(SocketContext);
-  if (!context) throw new Error("useSocket must be used within a SocketProvider");
+  if (!context) {
+    throw new Error("useSocket must be used within a SocketProvider");
+  }
   return context;
 };

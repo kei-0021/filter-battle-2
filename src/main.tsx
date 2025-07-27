@@ -1,6 +1,4 @@
 // main.tsx
-console.log("Socket URL:", import.meta.env.VITE_SOCKET_URL);
-
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";

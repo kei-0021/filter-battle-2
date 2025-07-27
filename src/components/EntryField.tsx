@@ -9,7 +9,7 @@ type EntryFieldProps = {
   error: string;
   submitted: boolean;
   allSubmitted: boolean;
-  inputRef: React.RefObject<HTMLInputElement>;
+  inputRef: React.RefObject<HTMLInputElement | null>; // 👈 `| null` を追加
   inputHeight: number;
   onCompositionStart: () => void;
   onCompositionEnd: () => void;

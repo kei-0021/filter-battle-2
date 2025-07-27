@@ -1,9 +1,7 @@
-import react from '@vitejs/plugin-react'; // 👈 これを追加
+// vite.config.ts
+import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  plugins: [react()], // 👈 これを追加
-  build: {
-    outDir: "dist",
-  },
+  plugins: [react()],
 });
