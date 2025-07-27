@@ -6,6 +6,9 @@
     "moduleResolution": "nodenext",
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "jsx": "react-jsx"
-  }
+    "jsx": "react-jsx",
+    "rootDir": "src",
+    "outDir": "dist-server"
+  },
+  "include": ["src/**/*"]
 }
