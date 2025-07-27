@@ -1,9 +1,9 @@
 import { SCORE_CORRECTLY_POKE, SCORE_CORRECTLY_POKED } from "../constants.js";
 
 import express from "express";
-const http = require("http");
-const { Server } = require("socket.io");
-const themes = require("../data/themes.json");
+import http from "http";
+import { Server } from "socket.io";
+import themes from "../data/themes.json" with { type: "json" };
 
 const app = express();
 const server = http.createServer(app);
