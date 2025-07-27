@@ -1,0 +1,132 @@
+/* bubble-style.css */
+.bubble-style {
+  position: relative;
+  display: inline-block;
+  width: 400px;
+  height: 160px;
+  background: radial-gradient(circle at 30% 30%, #ffffffcc, #ccf4ffcc, #c2d8ffcc, #c7bfffcc);
+  padding: 1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 0 10px rgba(255, 255, 255, 0.4),
+    inset 0 0 30px rgba(255, 255, 255, 0.2),
+    0 8px 12px rgba(150, 220, 220, 0.5);
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(255,255,255,0.5), 0 0 4px #0003;
+  user-select: none;
+  overflow: hidden;
+  box-sizing: border-box;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transition: all 0.3s ease-in-out;
+}
+
+.bubble-style .theme {
+  position: absolute;
+  top: 0px;
+  left: 4px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
+  user-select: none;
+  text-shadow: 0 0 4px #0006;
+}
+
+.bubble-style .playerName {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
+  user-select: none;
+  text-shadow: 0 0 4px #0006;
+}
+
+.bubble-style button.poke-button {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.8);
+  color: #007a5e;
+  border: 1.5px solid #00b386;
+  border-radius: 12px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease-in-out, background-color 0.3s ease;
+  box-shadow: 0 0 8px #00d99b88;
+  user-select: none;
+}
+
+.bubble-style button.poke-button:hover {
+  transform: scale(1.1);
+  background-color: rgba(255, 255, 255, 1);
+}
+
+.bubble-style .poke-result {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  user-select: none;
+  text-shadow: 0 0 5px #000;
+}
+
+.bubble-style .poke-success {
+  color: #00e676;
+  text-shadow: 0 0 10px #00ff88;
+}
+
+.bubble-style .poke-fail {
+  color: #ff5252;
+  text-shadow: 0 0 10px #ff6e6e;
+}
+
+/* テキスト本体部分の余白確保 */
+.bubble-style > div:first-child {
+  padding: 1rem;
+  padding-top: 1.2rem;
+  padding-bottom: 28px;
+  box-sizing: border-box;
+  word-break: break-word;
+  white-space: normal;
+}
+
+@keyframes slideInFromRight {
+  0% {
+    transform: translateX(120vw); /* 少し遠くから */
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.slide-in {
+  animation: slideInFromRight 1.8s cubic-bezier(0.22, 1, 0.36, 1) forwards; /* ゆったり感のあるイージング */
+}
+
+@keyframes bubblePop {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(1.3);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+.bubble-pop {
+  animation: bubblePop 0.5s forwards;
+}
