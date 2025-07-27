@@ -5,6 +5,7 @@ import { Server } from "socket.io";
 import { fileURLToPath } from "url";
 import { SCORE_CORRECTLY_POKE, SCORE_CORRECTLY_POKED } from "../constants.js";
 import themes from "../data/themes.json" with { type: "json" };
+import cors from "cors"; // 👈 ここを追加しました
 
 // ESM環境で __dirname 取得
 const __filename = fileURLToPath(import.meta.url);
@@ -18,6 +19,12 @@ const allowedOrigins = [
   "https://filter-battle-2.onrender.com",
   "http://localhost:5173",
 ];
+
+// 👈 ここにExpressのCORSミドルウェアを追加
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
 
 const io = new Server(server, {
   cors: {
@@ -35,7 +42,7 @@ app.get("*", (_, res) => {
   res.sendFile(path.join(distPath, "index.html"));
 });
 
-// Socket.IOロジック
+// Socket.IOロジック (変更なし)
 const players = new Map(); // socket.id => { name, score }
 const submissionsCount = new Map(); // socket.id => boolean
 let currentTheme = null;
