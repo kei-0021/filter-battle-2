@@ -9,7 +9,7 @@
     "build": "npm run build:server && npm run build:client",
     "preview": "vite preview",
     "server": "node dist/server/server.js",
-    "start": "node dist/server/server.js",
+    "start": "node dist-server/server/server.js",
     "start:dev": "npm run build:server && concurrently \"npm run server\" \"npm run dev\""
   },
   "dependencies": {
