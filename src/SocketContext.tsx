@@ -1,10 +1,11 @@
-import { createContext, ReactNode, useContext, useMemo } from "react";
+import { createContext, ReactNode, useContext } from "react";
 import { io, Socket } from "socket.io-client";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:3001";
 
 export const socket = io(SOCKET_URL, {
-  transports: ["websocket"],
+  transports: ['websocket'], // WebSocketのみを強制
+  upgrade: false // これを設定すると、まずポーリングを試さず直接WebSocketへ
 });
 
 const SocketContext = createContext<Socket | null>(null);
