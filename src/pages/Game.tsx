@@ -2,12 +2,12 @@ import { ChangeEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import { EntryField } from "../components/EntryField.js";
 import { GameHeader } from "../components/GameHeader.js";
 import { PokeInputPopup } from "../components/PokeInputPopup.js";
-import { ResultPopup } from "../components/ResultPopup.js";
+import { PokeResultPopup } from "../components/PokeResultPopup.js";
 import { RuleButton, RuleModal } from "../components/RuleModal.js";
 import { ScoreBoard } from "../components/ScoreBoard.js";
 import { SubmittedCardsArea } from "../components/SubmittedCardsArea.js";
 import { Timer } from "../components/Timer.js";
-import { SUBMISSION_TIME_LIMIT } from "../constants.js";
+import { getScoreForTurn, SUBMISSION_TIME_LIMIT } from "../constants.js";
 import filters from "../data/filters.json" with { type: "json" };
 import { usePlayer } from "../PlayerContext.js";
 import { useSocket } from "../SocketContext.js";
@@ -30,6 +30,7 @@ export function Game() {
 
   const [pokeTargetPlayer, setPokeTargetPlayer] = useState<string | null>(null);
   const [pokeResult, setPokeResult] = useState<boolean | null>(null);
+  const [pokeScoreChange, setPokeScoreChange] = useState<number | null>(null);
 
   const [playerCount, setPlayerCount] = useState(0);
   const [timerResetTrigger, setTimerResetTrigger] = useState(0);
@@ -174,12 +175,16 @@ export function Game() {
     if ((!allowEmpty && !keyword.trim()) || error) {
       return;
     }
+    const currentTurnIndex = submittedCards.filter(
+      (card) => card.playerName === playerName
+    ).length;
 
-    const newCard = {
+    const newCard: SubmittedCardData = {
       text: keyword,
       playerName: playerName || "名無し",
       theme,
       filterCategory: selectedCategory,
+      turnIndex: currentTurnIndex
     };
     console.log("submitイベント送信:", newCard);
     socket.emit("submit", newCard);
@@ -218,15 +223,20 @@ export function Game() {
     setTimeout(() => setPokeTargetPlayer(null), 500);
 
     if (isCorrect) {
+      const score = getScoreForTurn(targetCard.turnIndex);
+      setPokeScoreChange(score);
       socket.emit("pokeResult", {
         attackerName: playerName,
         targetName: pokeTargetPlayer,
         isCorrect,
+        turnIndex: targetCard.turnIndex
       });
 
       socket.emit("removeCard", {
         targetPlayerName: pokeTargetPlayer,
       });
+    }else{
+      setPokeScoreChange(null);
     }
   };
 
@@ -256,6 +266,7 @@ export function Game() {
         filters={filters}
         selectedCategory={selectedCategory}
         playerName={playerName}
+        allSubmitted={allSubmitted}
         pokeTargetPlayer={pokeTargetPlayer}
         pokeResult={pokeResult}
         onPoke={handlePoke}
@@ -284,7 +295,7 @@ export function Game() {
         onClose={() => setPokeTargetPlayer(null)}
       />
 
-      <ResultPopup result={pokeResult} onClose={closePopup} />
+      <PokeResultPopup result={pokeResult} scoreChange={pokeScoreChange} onClose={closePopup} />
 
       {/* ルールボタン */}
       <RuleButton onClick={() => setIsRuleOpen(true)} />

@@ -1,3 +1,4 @@
+// SubmittedCard.tsx
 import { useEffect, useRef, useState } from "react";
 import "../styles/bubble-style.css";
 
@@ -6,6 +7,7 @@ type SubmittedCardProps = {
   playerName?: string;
   theme: string;
   filterKeywords?: string[];
+  score?: number;
   showPokeButton?: boolean;
   useBubbleStyle?: boolean;
   pokeResult?: boolean | null;
@@ -17,6 +19,7 @@ export function SubmittedCard({
   playerName,
   theme,
   filterKeywords,
+  score,
   showPokeButton = false,
   useBubbleStyle = true,
   pokeResult = null,
@@ -79,12 +82,37 @@ export function SubmittedCard({
         padding: !useBubbleStyle ? "1rem" : undefined,
       }}
     >
+      {/* うっすら得点表示 */}
+      {score !== undefined && (
+        <div
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            fontSize: "4rem",         // 大きめサイズに
+            fontWeight: "900",
+            color: "rgba(255, 255, 255, 0.1)", // さらに薄めに
+            userSelect: "none",
+            pointerEvents: "none",
+            zIndex: 0,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {score}
+        </div>
+      )}
       {theme && (
         <div
           className="theme"
           style={{
             color: useBubbleStyle ? "rgba(255 255 255 / 0.8)" : "rgba(0,0,0,0.4)",
             textShadow: useBubbleStyle ? "0 0 5px #0008" : undefined,
+            paddingLeft: "0.8rem",   // ← 左側に余白
+            paddingTop: "0.4rem",    // ← 上側に余白
+            position: "absolute",    // 親のpositionがrelativeなら絶対位置指定もOK
+            top: 0,
+            left: 0,
           }}
         >
           {theme}

@@ -1,11 +1,13 @@
+// PokeResult.tsx
 import { useEffect } from "react";
 
-type ResultPopupProps = {
+type PokePokeResultPopupProps = {
   result: boolean | null;
+  scoreChange: number | null;
   onClose: () => void;
 };
 
-export function ResultPopup({ result, onClose }: ResultPopupProps) {
+export function PokeResultPopup({ result, scoreChange, onClose }: PokePokeResultPopupProps) {
   useEffect(() => {
     if (result !== null) {
       const timer = setTimeout(onClose, 500); // 0.5秒後に自動で閉じる
@@ -46,7 +48,7 @@ export function ResultPopup({ result, onClose }: ResultPopupProps) {
           minWidth: "200px",
         }}
       >
-        {result ? "🎯 正解！ +3点" : "❌ ハズレ"}
+        {result ? `🎯 正解！ +${scoreChange ?? "?"}点` : "❌ ハズレ"}
       </div>
     </>
   );

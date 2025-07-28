@@ -4,8 +4,12 @@ import http from "http";
 import path from "path";
 import { Server } from "socket.io";
 import { fileURLToPath } from "url";
-import { SCORE_CORRECTLY_POKE, SCORE_CORRECTLY_POKED } from "../constants.js";
+import {
+  getScoreForTurn,
+  SCORE_CORRECTLY_POKED
+} from "../constants.js";
 import themes from "../data/themes.json" with { type: "json" };
+import { SubmittedCardData } from "../types/gameTypes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,14 +22,16 @@ const allowedOrigins = [
   "http://localhost:5173",
 ];
 
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+  })
+);
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173", // ここを修正
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -42,7 +48,7 @@ const players = new Map<string, { name: string; score: number }>();
 const submissionsCount = new Map<string, boolean>();
 let currentTheme: string | null = null;
 
-const chooseRandomTheme = (): string => {
+const chooseRandomTheme = () => {
   const idx = Math.floor(Math.random() * themes.length);
   return themes[idx];
 };
@@ -56,7 +62,7 @@ io.on("connection", (socket) => {
   console.log(`[CONNECT] ${socket.id}`);
   submissionsCount.set(socket.id, false);
 
-  socket.on("join", (name: string) => {
+  socket.on("join", (name) => {
     if (!players.has(socket.id)) {
       players.set(socket.id, { name, score: 0 });
     }
@@ -74,7 +80,7 @@ io.on("connection", (socket) => {
     io.emit("allSubmittedStatus", allSubmitted);
   });
 
-  socket.on("submit", (data: { text: string; playerName: string; theme: string; filterCategory: string }) => {
+  socket.on("submit", (data: SubmittedCardData) => {
     submissionsCount.set(socket.id, true);
     io.emit("newSubmission", data);
 
@@ -82,19 +88,21 @@ io.on("connection", (socket) => {
     io.emit("allSubmittedStatus", allSubmitted);
   });
 
-  socket.on("pokeResult", ({ attackerName, targetName, isCorrect }: { attackerName: string; targetName: string; isCorrect: boolean }) => {
+  socket.on("pokeResult", ({ attackerName, targetName, isCorrect, turnIndex }) => {
     for (const player of players.values()) {
-      if (player.name === attackerName && isCorrect) {
-        player.score += SCORE_CORRECTLY_POKE;
-      }
-      if (player.name === targetName && isCorrect) {
-        player.score -= SCORE_CORRECTLY_POKED;
+      if (isCorrect) {
+        if (player.name === attackerName) {
+          player.score += getScoreForTurn(turnIndex);
+        }
+        if (player.name === targetName) {
+          player.score -= SCORE_CORRECTLY_POKED;
+        }
       }
     }
     broadcastPlayers();
   });
 
-  socket.on("removeCard", ({ targetPlayerName }: { targetPlayerName: string }) => {
+  socket.on("removeCard", ({ targetPlayerName }) => {
     io.emit("removeCard", { targetPlayerName });
   });
 

@@ -1,5 +1,7 @@
+// SubmittedCardsArea.tsx
 import React, { useEffect, useRef } from "react";
 import { SubmittedCard } from "../components/SubmittedCard.js";
+import { getScoreForTurn } from "../constants.js";
 import filters from "../data/filters.json" with { type: "json" };
 import { SubmittedCardData } from "../types/gameTypes.js";
 
@@ -8,6 +10,7 @@ type SubmittedCardsAreaProps = {
   filters: typeof filters;
   selectedCategory: keyof typeof filters | "";
   playerName: string;
+  allSubmitted: boolean;
   pokeTargetPlayer: string | null;
   pokeResult: boolean | null;
   onPoke: (targetPlayerName: string) => void;
@@ -18,6 +21,7 @@ export const SubmittedCardsArea: React.FC<SubmittedCardsAreaProps> = ({
   filters,
   selectedCategory,
   playerName,
+  allSubmitted,
   pokeTargetPlayer,
   pokeResult,
   onPoke,
@@ -68,7 +72,13 @@ export const SubmittedCardsArea: React.FC<SubmittedCardsAreaProps> = ({
               theme={card.theme}
               playerName={card.playerName}
               filterKeywords={selectedCategory ? filters[selectedCategory] : []}
-              showPokeButton={card.playerName !== playerName && isLatestCardForPlayer}
+              score={getScoreForTurn(card.turnIndex)}
+              showPokeButton={
+                allSubmitted &&
+                card.playerName !== playerName &&
+                isLatestCardForPlayer &&
+                !pokeTargetPlayer
+              }
               useBubbleStyle={true}
               pokeResult={isPopped ? true : null}
               onPoke={() => onPoke(card.playerName)}

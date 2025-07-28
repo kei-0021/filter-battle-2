@@ -4,6 +4,7 @@ export type SubmittedCardData = {
   playerName: string;
   theme: string;
   filterCategory: string; // 変更: keyof typeof filtersからstringに変更
+  turnIndex: number;
 };
 
 export type Player = {
