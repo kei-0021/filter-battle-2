@@ -1,23 +1,31 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type TimerProps = {
   duration: number;            // 秒数
   onTimeUp: () => void;        // タイムアップ時のコールバック
   resetTrigger: any;           // リセットのトリガー（親から渡す依存値）
-  isActive: boolean;           // タイマー動作フラグ（提出済みならfalseなど）
+  isActive: boolean;           // タイマー動作フラグ
 };
 
 export function Timer({ duration, onTimeUp, resetTrigger, isActive }: TimerProps) {
   const [timeLeft, setTimeLeft] = useState(duration);
+  const hasCalledTimeUpRef = useRef(false);
 
+  // リセット時に時間とフラグを戻す
   useEffect(() => {
+    console.log("Timer reset: duration", duration, "resetTrigger", resetTrigger);
     setTimeLeft(duration);
+    hasCalledTimeUpRef.current = false;
   }, [duration, resetTrigger]);
 
   useEffect(() => {
     if (!isActive) return;
+
     if (timeLeft <= 0) {
-      onTimeUp();
+      if (!hasCalledTimeUpRef.current) {
+        onTimeUp();
+        hasCalledTimeUpRef.current = true; // 一度だけ呼ぶようにフラグを立てる
+      }
       return;
     }
 
@@ -28,7 +36,7 @@ export function Timer({ duration, onTimeUp, resetTrigger, isActive }: TimerProps
     return () => clearTimeout(timerId);
   }, [timeLeft, isActive, onTimeUp]);
 
-  // 色を割合で決める（半分以上緑、2割超橙、それ以下赤）
+  // 色決め
   const percent = timeLeft / duration;
   const color =
     percent > 0.5 ? "#4caf50" :

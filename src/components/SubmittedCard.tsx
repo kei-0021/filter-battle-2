@@ -1,6 +1,7 @@
 // SubmittedCard.tsx
 import { useEffect, useRef, useState } from "react";
 import "../styles/bubble-style.css";
+import { GamePhase } from "../types/gameTypes";
 
 type SubmittedCardProps = {
   text: string;
@@ -12,6 +13,7 @@ type SubmittedCardProps = {
   useBubbleStyle?: boolean;
   pokeResult?: boolean | null;
   onPoke?: () => void;
+  phase: GamePhase;
 };
 
 export function SubmittedCard({
@@ -24,6 +26,7 @@ export function SubmittedCard({
   useBubbleStyle = true,
   pokeResult = null,
   onPoke,
+  phase,
 }: SubmittedCardProps) {
   const [visible, setVisible] = useState(false);
   const [fontSize, setFontSize] = useState(30);
@@ -58,13 +61,13 @@ export function SubmittedCard({
     };
 
     adjustFontSize();
-  }, [text]);
+  }, [text, phase]);
 
   // つつき成功したら割れるアニメーション開始＆非表示
   useEffect(() => {
     if (pokeResult === true) {
       setIsPopped(true);
-      const timer = setTimeout(() => setVisible(false), 500); // アニメーション長に合わせる
+      const timer = setTimeout(() => setVisible(false), 500);
       return () => clearTimeout(timer);
     }
   }, [pokeResult]);
@@ -82,7 +85,6 @@ export function SubmittedCard({
         padding: !useBubbleStyle ? "1rem" : undefined,
       }}
     >
-      {/* うっすら得点表示 */}
       {score !== undefined && (
         <div
           style={{
@@ -90,9 +92,9 @@ export function SubmittedCard({
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-            fontSize: "4rem",         // 大きめサイズに
+            fontSize: "4rem",
             fontWeight: "900",
-            color: "rgba(255, 255, 255, 0.1)", // さらに薄めに
+            color: "rgba(255, 255, 255, 0.1)",
             userSelect: "none",
             pointerEvents: "none",
             zIndex: 0,
@@ -108,9 +110,9 @@ export function SubmittedCard({
           style={{
             color: useBubbleStyle ? "rgba(255 255 255 / 0.8)" : "rgba(0,0,0,0.4)",
             textShadow: useBubbleStyle ? "0 0 5px #0008" : undefined,
-            paddingLeft: "0.8rem",   // ← 左側に余白
-            paddingTop: "0.4rem",    // ← 上側に余白
-            position: "absolute",    // 親のpositionがrelativeなら絶対位置指定もOK
+            paddingLeft: "0.8rem",
+            paddingTop: "0.4rem",
+            position: "absolute",
             top: 0,
             left: 0,
           }}
@@ -133,7 +135,7 @@ export function SubmittedCard({
           textShadow: useBubbleStyle ? "0 0 5px #0008" : undefined,
         }}
       >
-        {text}
+        {phase === "composing" ? "？？？" : text}
       </div>
 
       {playerName && (

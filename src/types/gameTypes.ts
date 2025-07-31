@@ -1,4 +1,7 @@
 // src/types/gameTypes.ts
+
+export type GamePhase = "waiting" | "composing" | "thinking" | "poking" | "finished";
+
 export type SubmittedCardData = {
   text: string;
   playerName: string;

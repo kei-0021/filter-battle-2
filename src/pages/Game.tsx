@@ -1,136 +1,172 @@
-import { ChangeEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
-import { EntryField } from "../components/EntryField.js";
-import { GameHeader } from "../components/GameHeader.js";
-import { PokeInputPopup } from "../components/PokeInputPopup.js";
-import { PokeResultPopup } from "../components/PokeResultPopup.js";
-import { RuleButton, RuleModal } from "../components/RuleModal.js";
-import { ScoreBoard } from "../components/ScoreBoard.js";
-import { SubmittedCardsArea } from "../components/SubmittedCardsArea.js";
-import { Timer } from "../components/Timer.js";
-import { getScoreForTurn, SUBMISSION_TIME_LIMIT } from "../constants.js";
+import {
+  ChangeEvent,
+  KeyboardEvent,
+  useCallback,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
+import {
+  EntryField,
+  GameHeader,
+  PokeInputPopup,
+  PokeResultPopup,
+  RuleButton,
+  RuleModal,
+  ScoreBoard,
+  SubmittedCardsArea,
+  Timer,
+} from "../components";
+import {
+  COMPOSING_TIME_LIMIT,
+  getScoreForTurn,
+  THINKING_TIME_LIMIT,
+} from "../constants.js";
 import filters from "../data/filters.json" with { type: "json" };
 import { usePlayer } from "../PlayerContext.js";
 import { useSocket } from "../SocketContext.js";
+import { gameReducer, initialState } from "../state/gameReducer";
 import { Player, SubmittedCardData } from "../types/gameTypes.js";
 
 export function Game() {
   const { playerName } = usePlayer();
   const socket = useSocket();
 
-  const [theme, setTheme] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<keyof typeof filters | "">("");
-  const [keywords, setKeywords] = useState<string[]>([]);
-  const [keyword, setKeyword] = useState("");
-  const [isComposing, setIsComposing] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [submittedCards, setSubmittedCards] = useState<SubmittedCardData[]>([]);
-  const [error, setError] = useState("");
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [allSubmitted, setAllSubmitted] = useState(false);
+  const [state, dispatch] = useReducer(gameReducer, initialState);
+  const {
+    theme,
+    selectedCategory,
+    text,
+    isComposing,
+    submittedCards,
+    error,
+    players,
+    pokeTargetPlayer,
+    pokeResult,
+    pokeScoreChange,
+    timerResetTrigger,
+    phase,
+  } = state;
 
-  const [pokeTargetPlayer, setPokeTargetPlayer] = useState<string | null>(null);
-  const [pokeResult, setPokeResult] = useState<boolean | null>(null);
-  const [pokeScoreChange, setPokeScoreChange] = useState<number | null>(null);
+  // 最新stateを保持するRefs
+  const phaseRef = useRef(phase);
+  const textRef = useRef(text);
+  const errorRef = useRef(error);
+  const selectedCategoryRef = useRef(selectedCategory);
+  const submittedCardsRef = useRef(submittedCards);
+  const playerNameRef = useRef(playerName);
+  const themeRef = useRef(theme);
+  const timerEndedRef = useRef(false);
 
-  const [playerCount, setPlayerCount] = useState(0);
-  const [timerResetTrigger, setTimerResetTrigger] = useState(0);
-  const hasJoinedRef = useRef(false); // ★追加: 既にjoinイベントを送ったかを管理するref
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
+  useEffect(() => {
+    textRef.current = text;
+  }, [text]);
+  useEffect(() => {
+    errorRef.current = error;
+  }, [error]);
+  useEffect(() => {
+    selectedCategoryRef.current = selectedCategory;
+  }, [selectedCategory]);
+  useEffect(() => {
+    submittedCardsRef.current = submittedCards;
+  }, [submittedCards]);
+  useEffect(() => {
+    playerNameRef.current = playerName;
+  }, [playerName]);
+  useEffect(() => {
+    themeRef.current = theme;
+  }, [theme]);
 
-  // ルールモーダル開閉用state
   const [isRuleOpen, setIsRuleOpen] = useState(false);
 
-  const HEADER_HEIGHT = 150;
-  const INPUT_HEIGHT = 120;
-
+  const hasJoinedRef = useRef(false);
   const cardsContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const cardsToShow = submittedCards;
+  // submit中の多重送信防止フラグ
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     const categories = Object.keys(filters) as (keyof typeof filters)[];
-    const randomCategory = categories[Math.floor(Math.random() * categories.length)];
-    setSelectedCategory(randomCategory);
-    setKeywords(filters[randomCategory]);
+    const randomCategory =
+      categories[Math.floor(Math.random() * categories.length)];
+    dispatch({
+      type: "SET_THEME",
+      theme: "",
+      selectedCategory: randomCategory,
+    });
   }, []);
 
-  // Socket.IOイベントリスナー設定
   useEffect(() => {
-    console.log("Socket.IO接続開始...");
-
-    const handleConnect = () => {
-      console.log("Socket.IO connected, id:", socket.id);
-      // ここではjoinは送らず、後続のuseEffectでplayerNameが確定した時に送る
+    const handleConnect = () => {};
+    const handleDisconnect = () => {
+      hasJoinedRef.current = false;
     };
-
-    const handleDisconnect = (reason: string) => {
-      console.log("Socket.IO disconnected:", reason);
-      hasJoinedRef.current = false; // ★追加: 切断されたらフラグをリセット
-    };
-
-    const handleConnectError = (err: Error) => {
-      console.error("Socket.IO connect_error:", err);
-    };
-
     const handleNewSubmission = (data: SubmittedCardData) => {
-      setSubmittedCards((prev) => [...prev, data]);
+      console.log("[client] received newSubmission", data);
+      dispatch({ type: "ADD_SUBMISSION", card: data });
     };
-
     const handlePlayersUpdate = (updatedPlayers: Player[]) => {
-      console.log("playersUpdateイベント受信:", updatedPlayers);
-      setPlayers(updatedPlayers);
-      // プレイヤー数が変わった時だけでなく、ゲーム開始（初回テーマ受信）時もリセットを考慮する
-      if (updatedPlayers.length !== playerCount) { // ★修正: プレイヤー数が変わったらリセット
-        setTimerResetTrigger((prev) => prev + 1);
-      }
-      setPlayerCount(updatedPlayers.length);
+      dispatch({ type: "SET_PLAYERS", players: updatedPlayers });
+      dispatch({ type: "INCREMENT_TIMER_RESET" });
     };
-
     const handleThemeUpdate = (newTheme: string) => {
-      console.log("themeUpdateイベント受信:", newTheme);
-      setTheme(newTheme);
-      setSubmitted(false);
-      setKeyword("");
-      setTimerResetTrigger((prev) => prev + 1); // ★追加: 新しいテーマが来た時もタイマーをリセット
+      dispatch({
+        type: "SET_THEME",
+        theme: newTheme,
+        selectedCategory: selectedCategoryRef.current,
+      });
+      dispatch({ type: "SET_PHASE", phase: "composing" });
+      dispatch({ type: "INCREMENT_TIMER_RESET" });
     };
-
-    const handleAllSubmittedStatus = (status: boolean) => {
-      console.log("allSubmittedStatusイベント受信:", status);
-      setAllSubmitted(status);
+    const handleAllSubmittedStatus = (allSubmitted: boolean) => {
+      if (allSubmitted && phaseRef.current === "composing") {
+        dispatch({ type: "SET_PHASE", phase: "thinking" });
+        dispatch({ type: "INCREMENT_TIMER_RESET" });
+      }
     };
-
     const handleRemoveCard = ({ targetPlayerName }: { targetPlayerName: string }) => {
-      setSubmittedCards((prev) => prev.filter((card) => card.playerName !== targetPlayerName));
+      dispatch({
+        type: "SET_SUBMITTED_CARDS",
+        submittedCards: submittedCardsRef.current.filter(
+          (card) => card.playerName !== targetPlayerName
+        ),
+      });
+    };
+    const handleStartPoking = () => {
+      console.log("[client] 🛰 startPoking received");
+      dispatch({ type: "SET_PHASE", phase: "poking" });
     };
 
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
-    socket.on("connect_error", handleConnectError);
     socket.on("newSubmission", handleNewSubmission);
     socket.on("playersUpdate", handlePlayersUpdate);
     socket.on("themeUpdate", handleThemeUpdate);
     socket.on("allSubmittedStatus", handleAllSubmittedStatus);
     socket.on("removeCard", handleRemoveCard);
+    socket.on("startPoking", handleStartPoking);
 
     return () => {
-      console.log("Gameコンポーネント: Socket.IOイベントリスナーを解除");
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
-      socket.off("connect_error", handleConnectError);
       socket.off("newSubmission", handleNewSubmission);
       socket.off("playersUpdate", handlePlayersUpdate);
       socket.off("themeUpdate", handleThemeUpdate);
       socket.off("allSubmittedStatus", handleAllSubmittedStatus);
       socket.off("removeCard", handleRemoveCard);
+      socket.off("startPoking", handleStartPoking);
     };
-  }, [socket, playerCount]);
+  }, [socket]);
 
-  // playerNameが設定され、ソケットが接続されており、かつまだjoinイベントを送っていない場合のみjoinイベントを送信
   useEffect(() => {
-    if (playerName && socket.connected && !hasJoinedRef.current) { // ★修正: hasJoinedRef.currentを追加
-      console.log("joinイベント送信: PlayerNameが設定されたため:", playerName);
+    if (playerName && socket.connected && !hasJoinedRef.current) {
       socket.emit("join", playerName);
-      hasJoinedRef.current = true; // ★追加: joinイベント送信後にフラグを設定
+      hasJoinedRef.current = true;
     }
   }, [playerName, socket.connected]);
 
@@ -150,53 +186,82 @@ export function Game() {
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (value.length > 200) {
-      setError("200文字以内で入力してください");
+      dispatch({ type: "SET_ERROR", error: "200文字以内で入力してください" });
     } else {
-      setError("");
+      dispatch({ type: "SET_ERROR", error: "" });
     }
-    setKeyword(value);
+    dispatch({ type: "SET_TEXT", text: value });
   };
 
-  const handleCompositionStart = () => {
-    setIsComposing(true);
-  };
+  const handleCompositionStart = () =>
+    dispatch({ type: "SET_IS_COMPOSING", isComposing: true });
+  const handleCompositionEnd = () =>
+    dispatch({ type: "SET_IS_COMPOSING", isComposing: false });
 
-  const handleCompositionEnd = () => {
-    setIsComposing(false);
-  };
+  const handleSubmit = useCallback(
+    (allowEmpty = false) => {
+      if (phaseRef.current !== "composing") return;
+      if (submittingRef.current) return;
+
+      const currentTurnIndex = submittedCardsRef.current.filter(
+        (card) => card.playerName === playerNameRef.current
+      ).length;
+      const hasSubmittedThisTurn = submittedCardsRef.current.some(
+        (card) =>
+          card.playerName === playerNameRef.current &&
+          card.turnIndex === currentTurnIndex
+      );
+      if (hasSubmittedThisTurn) return;
+      if (!allowEmpty && !textRef.current.trim()) return;
+      if (errorRef.current) return;
+
+      submittingRef.current = true;
+
+      const newCard: SubmittedCardData = {
+        text: textRef.current,
+        playerName: playerNameRef.current || "名無し",
+        theme: themeRef.current,
+        filterCategory: selectedCategoryRef.current,
+        turnIndex: currentTurnIndex,
+      };
+
+      socket.emit("submit", newCard);
+      dispatch({ type: "SET_TEXT", text: "" });
+
+      setTimeout(() => {
+        submittingRef.current = false;
+      }, 1000);
+    },
+    [socket, dispatch]
+  );
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !isComposing && keyword.trim() && !error && !submitted) {
+    if (
+      e.key === "Enter" &&
+      !isComposing &&
+      text.trim() &&
+      !error &&
+      phase === "composing"
+    ) {
       handleSubmit();
     }
   };
 
-  const handleSubmit = (allowEmpty = false) => {
-    if ((!allowEmpty && !keyword.trim()) || error) {
-      return;
-    }
-    const currentTurnIndex = submittedCards.filter(
-      (card) => card.playerName === playerName
-    ).length;
+  const handleTimerEnd = useCallback(() => {
+    if (timerEndedRef.current) return; // 2回目以降は無視
 
-    const newCard: SubmittedCardData = {
-      text: keyword,
-      playerName: playerName || "名無し",
-      theme,
-      filterCategory: selectedCategory,
-      turnIndex: currentTurnIndex
-    };
-    console.log("submitイベント送信:", newCard);
-    socket.emit("submit", newCard);
-    setSubmitted(true);
-    setKeyword("");
-  };
+    timerEndedRef.current = true;
 
-  const handleTimeUp = () => {
-    if (!submitted) {
+    console.log("[client] ⏰ timer ended. current phase:", phaseRef.current);
+    if (phaseRef.current === "composing") {
       handleSubmit(true);
     }
-  };
+  }, [handleSubmit]);
+
+  // タイマーリセットがかかるたびにtimerEndedRefをリセット
+  useEffect(() => {
+    timerEndedRef.current = false;
+  }, [timerResetTrigger]);
 
   const handleNextTheme = () => {
     socket.emit("nextTheme");
@@ -205,46 +270,46 @@ export function Game() {
   const handlePokeSubmit = (input: string) => {
     if (!pokeTargetPlayer) return;
 
-    const targetCard = submittedCards.filter((card) => card.playerName === pokeTargetPlayer).pop();
+    const targetCard = submittedCardsRef.current
+      .filter((card) => card.playerName === pokeTargetPlayer)
+      .pop();
     if (!targetCard) return;
 
     const normalizedGuess = input.trim();
     const isCorrect = normalizedGuess === targetCard.filterCategory;
 
-    console.log("つつき判定", {
-      input,
-      targetPlayer: pokeTargetPlayer,
-      targetFilter: targetCard.filterCategory,
+    dispatch({ type: "SET_POKE_RESULT", result: isCorrect });
+
+    setTimeout(() => {
+      dispatch({ type: "SET_POKE_TARGET_PLAYER", playerName: null });
+      dispatch({ type: "SET_POKE_RESULT", result: null });
+    }, 500);
+
+    // 不正解でもサーバーに送信するようにここを修正
+    socket.emit("pokeResult", {
+      attackerName: playerNameRef.current,
+      targetName: pokeTargetPlayer,
       isCorrect,
+      turnIndex: targetCard.turnIndex,
     });
-
-    setPokeResult(isCorrect);
-
-    setTimeout(() => setPokeTargetPlayer(null), 500);
 
     if (isCorrect) {
       const score = getScoreForTurn(targetCard.turnIndex);
-      setPokeScoreChange(score);
-      socket.emit("pokeResult", {
-        attackerName: playerName,
-        targetName: pokeTargetPlayer,
-        isCorrect,
-        turnIndex: targetCard.turnIndex
-      });
+      dispatch({ type: "SET_POKE_SCORE_CHANGE", score });
 
-      socket.emit("removeCard", {
-        targetPlayerName: pokeTargetPlayer,
-      });
-    }else{
-      setPokeScoreChange(null);
+      socket.emit("removeCard", { targetPlayerName: pokeTargetPlayer });
+    } else {
+      dispatch({ type: "SET_POKE_SCORE_CHANGE", score: null });
     }
   };
 
   const handlePoke = (targetPlayerName: string) => {
-    setPokeTargetPlayer(targetPlayerName);
+    dispatch({ type: "SET_POKE_TARGET_PLAYER", playerName: targetPlayerName });
   };
 
-  const closePopup = () => setPokeResult(null);
+  const closePopup = () => {
+    dispatch({ type: "SET_POKE_RESULT", result: null });
+  };
 
   return (
     <>
@@ -253,20 +318,41 @@ export function Game() {
         selectedCategory={selectedCategory}
         filterWords={selectedCategory ? filters[selectedCategory] : []}
       />
-
       <Timer
-        duration={SUBMISSION_TIME_LIMIT}
-        onTimeUp={handleTimeUp}
+        duration={
+          phase === "composing"
+            ? COMPOSING_TIME_LIMIT
+            : phase === "thinking"
+            ? THINKING_TIME_LIMIT
+            : phase === "poking"
+            ? COMPOSING_TIME_LIMIT
+            : 0
+        }
+        onTimeUp={handleTimerEnd}
         resetTrigger={timerResetTrigger}
-        isActive={!submitted && !allSubmitted}
+        isActive={["composing", "thinking", "poking"].includes(phase)}
       />
+      <div
+        style={{
+          position: "fixed",
+          top: 50,
+          right: 10,
+          color: "white",
+          backgroundColor: "rgba(0,0,0,0.5)",
+          padding: "4px 8px",
+          borderRadius: 4,
+          zIndex: 1100,
+        }}
+      >
+        Phase: {phase}
+      </div>
 
       <SubmittedCardsArea
-        cards={cardsToShow}
+        cards={submittedCards}
         filters={filters}
         selectedCategory={selectedCategory}
         playerName={playerName}
-        allSubmitted={allSubmitted}
+        phase={phase} // ← これだけでOK
         pokeTargetPlayer={pokeTargetPlayer}
         pokeResult={pokeResult}
         onPoke={handlePoke}
@@ -275,16 +361,16 @@ export function Game() {
       <ScoreBoard players={players} currentPlayerName={playerName} />
 
       <EntryField
-        keyword={keyword}
+        keyword={text}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
         onSubmit={handleSubmit}
         onNextTheme={handleNextTheme}
         error={error}
-        submitted={submitted}
-        allSubmitted={allSubmitted}
+        submitted={phase === "thinking" || phase === "poking"}
+        allSubmitted={phase === "poking" || phase === "finished"}
         inputRef={inputRef}
-        inputHeight={INPUT_HEIGHT}
+        inputHeight={120}
         onCompositionStart={handleCompositionStart}
         onCompositionEnd={handleCompositionEnd}
       />
@@ -292,15 +378,10 @@ export function Game() {
       <PokeInputPopup
         targetPlayerName={pokeTargetPlayer}
         onSubmit={handlePokeSubmit}
-        onClose={() => setPokeTargetPlayer(null)}
+        onClose={() => dispatch({ type: "SET_POKE_TARGET_PLAYER", playerName: null })}
       />
-
       <PokeResultPopup result={pokeResult} scoreChange={pokeScoreChange} onClose={closePopup} />
-
-      {/* ルールボタン */}
       <RuleButton onClick={() => setIsRuleOpen(true)} />
-      
-      {/* ルールモーダル */}
       <RuleModal open={isRuleOpen} onClose={() => setIsRuleOpen(false)} />
     </>
   );

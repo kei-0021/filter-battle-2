@@ -6,7 +6,8 @@ import { Server } from "socket.io";
 import { fileURLToPath } from "url";
 import {
   getScoreForTurn,
-  SCORE_CORRECTLY_POKED
+  SCORE_CORRECTLY_POKED,
+  SCORE_FAILED_POKE
 } from "../constants.js";
 import themes from "../data/themes.json" with { type: "json" };
 import { SubmittedCardData } from "../types/gameTypes.js";
@@ -86,6 +87,12 @@ io.on("connection", (socket) => {
 
     const allSubmitted = [...submissionsCount.values()].every(Boolean);
     io.emit("allSubmittedStatus", allSubmitted);
+
+    if (allSubmitted) {
+      setTimeout(() => {
+        io.emit("startPoking");
+      }, 10000);
+    }
   });
 
   socket.on("pokeResult", ({ attackerName, targetName, isCorrect, turnIndex }) => {
@@ -96,6 +103,10 @@ io.on("connection", (socket) => {
         }
         if (player.name === targetName) {
           player.score -= SCORE_CORRECTLY_POKED;
+        }
+      }else{
+        if (player.name === attackerName) {
+          player.score -= SCORE_FAILED_POKE; // 定数を別途用意
         }
       }
     }

@@ -3,14 +3,14 @@ import React, { useEffect, useRef } from "react";
 import { SubmittedCard } from "../components/SubmittedCard.js";
 import { getScoreForTurn } from "../constants.js";
 import filters from "../data/filters.json" with { type: "json" };
-import { SubmittedCardData } from "../types/gameTypes.js";
+import { GamePhase, SubmittedCardData } from "../types/gameTypes.js";
 
 type SubmittedCardsAreaProps = {
   cards: SubmittedCardData[];
   filters: typeof filters;
   selectedCategory: keyof typeof filters | "";
   playerName: string;
-  allSubmitted: boolean;
+  phase: GamePhase;
   pokeTargetPlayer: string | null;
   pokeResult: boolean | null;
   onPoke: (targetPlayerName: string) => void;
@@ -21,7 +21,7 @@ export const SubmittedCardsArea: React.FC<SubmittedCardsAreaProps> = ({
   filters,
   selectedCategory,
   playerName,
-  allSubmitted,
+  phase,
   pokeTargetPlayer,
   pokeResult,
   onPoke,
@@ -30,16 +30,17 @@ export const SubmittedCardsArea: React.FC<SubmittedCardsAreaProps> = ({
 
   useEffect(() => {
     if (!containerRef.current) return;
-    // 少し遅らせる
     const timer = setTimeout(() => {
       containerRef.current!.scrollTo({
         top: containerRef.current!.scrollHeight,
         behavior: "smooth",
       });
-    }, 100); // 100ms遅延
+    }, 100);
 
     return () => clearTimeout(timer);
   }, [cards]);
+
+  const allSubmitted = phase === "poking" || phase === "finished";
 
   return (
     <div
@@ -82,6 +83,7 @@ export const SubmittedCardsArea: React.FC<SubmittedCardsAreaProps> = ({
               useBubbleStyle={true}
               pokeResult={isPopped ? true : null}
               onPoke={() => onPoke(card.playerName)}
+              phase={phase}
             />
           </div>
         );
