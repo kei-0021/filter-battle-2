@@ -3,17 +3,17 @@
 /**
  * ゲーム内でのカード提出に使うタイマーの時間制限（秒）
  */
-export const COMPOSING_TIME_LIMIT = 5;
+export const COMPOSING_TIME_LIMIT = 60;
 
 /**
  * つつくために考えるための時間 (秒)
  */
-export const THINKING_TIME_LIMIT = 10;
+export const THINKING_TIME_LIMIT = 30;
 
 /**
  * poke（つつき）フェーズの時間制限（秒）
  */
-export const POKING_TIME_LIMIT = 15;
+export const POKING_TIME_LIMIT = 40;
 
 /**
  * 正しくつついたときに獲得する最大スコア
