@@ -14,6 +14,8 @@ type SubmittedCardProps = {
   pokeResult?: boolean | null;
   onPoke?: () => void;
   phase: GamePhase;
+  roundIndex: number;           // 追加: カードのラウンド番号
+  currentRoundIndex: number;    // 追加: 現在のラウンド番号
 };
 
 export function SubmittedCard({
@@ -27,6 +29,8 @@ export function SubmittedCard({
   pokeResult = null,
   onPoke,
   phase,
+  roundIndex,
+  currentRoundIndex,
 }: SubmittedCardProps) {
   const [visible, setVisible] = useState(false);
   const [fontSize, setFontSize] = useState(30);
@@ -63,7 +67,6 @@ export function SubmittedCard({
     adjustFontSize();
   }, [text, phase]);
 
-  // つつき成功したら割れるアニメーション開始＆非表示
   useEffect(() => {
     if (pokeResult === true) {
       setIsPopped(true);
@@ -135,7 +138,7 @@ export function SubmittedCard({
           textShadow: useBubbleStyle ? "0 0 5px #0008" : undefined,
         }}
       >
-        {phase === "composing" ? "？？？" : text}
+        {phase === "composing" && roundIndex === currentRoundIndex ? "？？？" : text}
       </div>
 
       {playerName && (
@@ -150,7 +153,7 @@ export function SubmittedCard({
         </div>
       )}
 
-      {showPokeButton && pokeResult === null && onPoke && (
+      {phase === "poking" && showPokeButton && pokeResult === null && onPoke && (
         <button className="poke-button" onClick={onPoke}>
           👈 つつく
         </button>

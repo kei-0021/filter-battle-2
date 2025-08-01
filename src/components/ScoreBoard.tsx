@@ -30,12 +30,12 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
       <h3 style={{ marginTop: 0 }}>スコアボード</h3>
       <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
         {players.length === 0 && <li>参加者なし</li>}
-        {players.map((player, idx) => {
+        {players.map((player) => {
           const isMe = player.name === currentPlayerName;
 
           return (
             <li
-              key={idx}
+              key={player.name} // idx から name に変更し重複リスク軽減
               style={{
                 padding: "0.25rem 0",
                 borderBottom: "1px solid #444",

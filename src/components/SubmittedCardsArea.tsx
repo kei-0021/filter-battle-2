@@ -1,4 +1,3 @@
-// SubmittedCardsArea.tsx
 import React, { useEffect, useRef } from "react";
 import { SubmittedCard } from "../components/SubmittedCard.js";
 import { getScoreForTurn } from "../constants.js";
@@ -14,6 +13,9 @@ type SubmittedCardsAreaProps = {
   pokeTargetPlayer: string | null;
   pokeResult: boolean | null;
   onPoke: (targetPlayerName: string) => void;
+  // ここにpoke済みプレイヤーのリストを追加
+  pokeDonePlayers: string[];
+  currentRound: number
 };
 
 export const SubmittedCardsArea: React.FC<SubmittedCardsAreaProps> = ({
@@ -25,6 +27,8 @@ export const SubmittedCardsArea: React.FC<SubmittedCardsAreaProps> = ({
   pokeTargetPlayer,
   pokeResult,
   onPoke,
+  pokeDonePlayers,
+  currentRound,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -66,6 +70,17 @@ export const SubmittedCardsArea: React.FC<SubmittedCardsAreaProps> = ({
 
         const isPopped = pokeResult === true && pokeTargetPlayer === card.playerName;
 
+        // poke済みかどうか判定
+        const isPokeDoneForThisPlayer = pokeDonePlayers.includes(playerName);
+
+        // 自分がpoke済み、または自分自身のカードはpoke不可
+        const canShowPokeButton =
+          allSubmitted &&
+          card.playerName !== playerName &&
+          isLatestCardForPlayer &&
+          !pokeTargetPlayer &&
+          !pokeDonePlayers.includes(playerName);
+
         return (
           <div key={`${card.playerName}-${index}`} style={{ marginBottom: "1rem" }}>
             <SubmittedCard
@@ -74,16 +89,13 @@ export const SubmittedCardsArea: React.FC<SubmittedCardsAreaProps> = ({
               playerName={card.playerName}
               filterKeywords={selectedCategory ? filters[selectedCategory] : []}
               score={getScoreForTurn(card.turnIndex)}
-              showPokeButton={
-                allSubmitted &&
-                card.playerName !== playerName &&
-                isLatestCardForPlayer &&
-                !pokeTargetPlayer
-              }
+              showPokeButton={canShowPokeButton}
               useBubbleStyle={true}
               pokeResult={isPopped ? true : null}
               onPoke={() => onPoke(card.playerName)}
               phase={phase}
+              roundIndex={card.round}
+              currentRoundIndex={currentRound}
             />
           </div>
         );

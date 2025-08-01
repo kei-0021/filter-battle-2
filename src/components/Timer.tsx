@@ -1,47 +1,48 @@
 import { useEffect, useRef, useState } from "react";
 
 type TimerProps = {
-  duration: number;            // 秒数
-  onTimeUp: () => void;        // タイムアップ時のコールバック
-  resetTrigger: any;           // リセットのトリガー（親から渡す依存値）
-  isActive: boolean;           // タイマー動作フラグ
+  duration: number;
+  onTimeUp: () => void;
+  resetTrigger: any;
+  isActive: boolean;
 };
 
 export function Timer({ duration, onTimeUp, resetTrigger, isActive }: TimerProps) {
   const [timeLeft, setTimeLeft] = useState(duration);
   const hasCalledTimeUpRef = useRef(false);
 
-  // リセット時に時間とフラグを戻す
-  useEffect(() => {
-    console.log("Timer reset: duration", duration, "resetTrigger", resetTrigger);
-    setTimeLeft(duration);
-    hasCalledTimeUpRef.current = false;
-  }, [duration, resetTrigger]);
-
+  // resetTrigger または isActive 変化時にリセット
   useEffect(() => {
     if (!isActive) return;
+    console.log("[🕑タイマーセット] %d s" , duration)
+    hasCalledTimeUpRef.current = false;
+    setTimeLeft(duration);
+  }, [duration, resetTrigger, isActive]);
 
-    if (timeLeft <= 0) {
-      if (!hasCalledTimeUpRef.current) {
-        onTimeUp();
-        hasCalledTimeUpRef.current = true; // 一度だけ呼ぶようにフラグを立てる
-      }
-      return;
-    }
+  // カウントダウン処理
+  useEffect(() => {
+    if (!isActive) return;
+    if (timeLeft <= 0) return;
 
     const timerId = setTimeout(() => {
-      setTimeLeft(timeLeft - 1);
+      setTimeLeft((prev) => prev - 1);
     }, 1000);
 
     return () => clearTimeout(timerId);
+  }, [timeLeft, isActive]);
+
+  // タイムアップ呼び出し（副作用）
+  useEffect(() => {
+    if (!isActive) return;
+    if (timeLeft <= 0 && !hasCalledTimeUpRef.current) {
+      hasCalledTimeUpRef.current = true;
+      onTimeUp();
+    }
   }, [timeLeft, isActive, onTimeUp]);
 
-  // 色決め
   const percent = timeLeft / duration;
   const color =
-    percent > 0.5 ? "#4caf50" :
-    percent > 0.2 ? "#ff9800" :
-    "#ff4d4d";
+    percent > 0.5 ? "#4caf50" : percent > 0.2 ? "#ff9800" : "#ff4d4d";
 
   return (
     <div

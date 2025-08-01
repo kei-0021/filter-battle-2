@@ -3,6 +3,8 @@ import filters from "../data/filters.json";
 import { GamePhase, Player, SubmittedCardData } from "../types/gameTypes";
 
 export type GameState = {
+  /** 現在のラウンド */
+  currentRound: number;
   /** 現在のテーマ */
   theme: string;
   /** 選択中のカテゴリ */
@@ -29,9 +31,12 @@ export type GameState = {
   timerResetTrigger: number;
   /** ゲーム全体の進行フェーズ */
   phase: GamePhase;
+  /** 全員提出済みかどうかのフラグ */
+  allSubmitted: boolean;
 };
 
 export type GameAction =
+  | { type: "SET_CURRENT_ROUND"; currentRound: number }
   | { type: "SET_THEME"; theme: string; selectedCategory: keyof typeof filters | "" }
   | { type: "SET_TEXT"; text: string }
   | { type: "ADD_SUBMISSION"; card: SubmittedCardData }
@@ -44,9 +49,11 @@ export type GameAction =
   | { type: "SET_POKE_SCORE_CHANGE"; score: number | null }
   | { type: "SET_IS_COMPOSING"; isComposing: boolean }
   | { type: "SET_SUBMITTED_CARDS"; submittedCards: SubmittedCardData[] }
-  | { type: "SET_PHASE"; phase: GamePhase };
+  | { type: "SET_PHASE"; phase: GamePhase }
+  | { type: "SET_ALL_SUBMITTED"; allSubmitted: boolean };
 
 export const initialState: GameState = {
+  currentRound: 0,
   theme: "",
   selectedCategory: "",
   keywords: [],
@@ -60,10 +67,13 @@ export const initialState: GameState = {
   pokeScoreChange: null,
   timerResetTrigger: 0,
   phase: "composing",
+  allSubmitted: false,
 };
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
+    case "SET_CURRENT_ROUND":
+      return { ...state, currentRound: action.currentRound };
     case "SET_THEME":
       return {
         ...state,
@@ -71,7 +81,6 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         selectedCategory: action.selectedCategory,
         keywords: action.selectedCategory ? filters[action.selectedCategory] : [],
         text: "",
-        submittedCards: [],
         pokeTargetPlayer: null,
         pokeResult: null,
         pokeScoreChange: null,
@@ -100,6 +109,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, submittedCards: action.submittedCards };
     case "SET_PHASE":
       return { ...state, phase: action.phase };
+    case "SET_ALL_SUBMITTED":
+      return { ...state, allSubmitted: action.allSubmitted };
     default:
       return state;
   }
