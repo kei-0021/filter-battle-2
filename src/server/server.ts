@@ -47,7 +47,8 @@ app.get("*", (_, res) => {
 });
 
 const players = new Map<string, { name: string; score: number }>();
-const submissionsCount = new Map<string, number>(); // socket.id → 提出ラウンド番号 or -1 未提出
+const submittedCardsInThisRound = new Map<string, number>(); // socket.id → 提出ラウンド番号 or -1 未提出
+const submittedCards = new Map<string, SubmittedCardData>(); // socket.id → カードデータ
 const pokeHistory = new Map<string, boolean>();
 const timeUpMap = {
   composing: new Set<string>(),
@@ -82,13 +83,13 @@ const broadcastPhase = () => {
 io.on("connection", (socket) => {
   console.log(`[CONNECT] ${socket.id}`);
 
-  submissionsCount.set(socket.id, -1);
+  submittedCardsInThisRound.set(socket.id, -1);
 
   socket.on("join", (name) => {
     if (!players.has(socket.id)) {
       players.set(socket.id, { name, score: 0 });
     }
-    submissionsCount.set(socket.id, -1);
+    submittedCardsInThisRound.set(socket.id, -1);
 
     console.log(`[JOIN] ${name} (${socket.id})`);
 
@@ -102,7 +103,7 @@ io.on("connection", (socket) => {
     socket.emit("roundUpdate", { newTheme: currentTheme, currentRound });
     broadcastPhase();
 
-    const allSubmitted = [...submissionsCount.values()].every(
+    const allSubmitted = [...submittedCardsInThisRound.values()].every(
       (roundNum) => roundNum === currentRound
     );
     io.emit("allSubmittedStatus", allSubmitted);
@@ -110,16 +111,17 @@ io.on("connection", (socket) => {
   });
 
   socket.on("submit", (data: SubmittedCardData) => {
-    submissionsCount.set(socket.id, currentRound);
+    submittedCardsInThisRound.set(socket.id, currentRound);
+    submittedCards.set(socket.id, data);
     io.emit("newSubmission", data);
 
-    const allSubmitted = [...submissionsCount.values()].every(
+    const allSubmitted = [...submittedCardsInThisRound.values()].every(
       (roundNum) => roundNum === currentRound
     );
 
     console.log(
       `[SUBMIT] currentRound=${currentRound}, phase=${phase}, submissions=${JSON.stringify(
-        [...submissionsCount.entries()]
+        [...submittedCardsInThisRound.entries()]
       )}, allSubmitted=${allSubmitted}`
     );
 
@@ -138,16 +140,40 @@ io.on("connection", (socket) => {
     io.emit("allSubmittedStatus", allSubmitted);
   });
 
-  socket.on("pokeResult", ({ attackerName, targetName, isCorrect, turnIndex }) => {
-    if (pokeHistory.has(attackerName)) return;
+  socket.on("pokeResult", ({ attackerName, targetName, guess }) => {
+    if (pokeHistory.has(attackerName)) return; // 既にpoke済みなら無視
 
+    // poke済みにセット
     pokeHistory.set(attackerName, true);
     broadcastPokeHistory();
 
+    // 対象のカードを探す
+    let targetCard: SubmittedCardData | undefined;
+    for (const card of submittedCards.values()) {
+      if (card.playerName === targetName) {
+        targetCard = card;
+        break;
+      }
+    }
+    if (!targetCard) {
+      // カードが見つからなければ不正解扱い
+      io.to(attackerName).emit("pokeResultNotification", {
+        attackerName,
+        targetName,
+        isCorrect: false,
+        turnIndex: null,
+        scoreChange: null,
+      });
+      return;
+    }
+
+    const isCorrect = guess === targetCard.filterCategory;
+
+    // スコア更新
     for (const player of players.values()) {
       if (isCorrect) {
         if (player.name === attackerName) {
-          player.score += getScoreForTurn(turnIndex);
+          player.score += getScoreForTurn(targetCard.turnIndex);
         }
         if (player.name === targetName) {
           player.score -= SCORE_CORRECTLY_POKED;
@@ -159,6 +185,25 @@ io.on("connection", (socket) => {
       }
     }
     broadcastPlayers();
+
+    if (isCorrect) {
+      // カード削除
+      for (const [socketId, card] of submittedCards.entries()) {
+        if (card.playerName === targetName) {
+          submittedCards.delete(socketId);
+          break;
+        }
+      }
+      io.emit("removeCard", { targetPlayerName: targetName, turnIndex: targetCard.turnIndex });
+    }
+
+    io.emit("pokeResultNotification", {
+      attackerName,
+      targetName,
+      isCorrect,
+      turnIndex: targetCard.turnIndex,
+      scoreChange: isCorrect ? getScoreForTurn(targetCard.turnIndex) : SCORE_FAILED_POKE * -1,
+    });
   });
 
   socket.on("removeCard", ({ targetPlayerName, turnIndex }) => {
@@ -170,8 +215,8 @@ io.on("connection", (socket) => {
     currentRound++;
     phase = "composing";
 
-    for (const key of submissionsCount.keys()) {
-      submissionsCount.set(key, -1);
+    for (const key of submittedCardsInThisRound.keys()) {
+      submittedCardsInThisRound.set(key, -1);
     }
     pokeHistory.clear();
 
@@ -232,13 +277,13 @@ io.on("connection", (socket) => {
   socket.on("disconnect", (reason) => {
     const player = players.get(socket.id);
     players.delete(socket.id);
-    submissionsCount.delete(socket.id);
+    submittedCardsInThisRound.delete(socket.id);
     console.log(
       `[DISCONNECT] ${player?.name || "unknown"} (${socket.id}) - Reason: ${reason}`
     );
     broadcastPlayers();
 
-    const allSubmitted = [...submissionsCount.values()].every(
+    const allSubmitted = [...submittedCardsInThisRound.values()].every(
       (roundNum) => roundNum === currentRound
     );
     io.emit("allSubmittedStatus", allSubmitted);

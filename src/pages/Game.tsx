@@ -20,8 +20,7 @@ import {
 } from "../components";
 import {
   COMPOSING_TIME_LIMIT,
-  getScoreForTurn,
-  THINKING_TIME_LIMIT,
+  THINKING_TIME_LIMIT
 } from "../constants.js";
 import filters from "../data/filters.json" with { type: "json" };
 import { usePlayer } from "../PlayerContext.js";
@@ -127,7 +126,7 @@ export function Game() {
         return;
       }
       if (["composing", "thinking", "poking", "finished"].includes(newPhase)) {
-        console.log("[✨フェーズ更新]:" , newPhase);
+        console.log("[✨✨ フェーズ更新]:" , newPhase);
         phaseRef.current = newPhase;
         submittingRef.current = false; // ← ここでリセットを即時行う
         dispatch({ type: "SET_PHASE", phase: newPhase });
@@ -331,37 +330,18 @@ export function Game() {
   const handlePokeSubmit = (input: string) => {
     if (!pokeTargetPlayer) return;
 
-    const targetCard = submittedCardsRef.current
-      .filter(card => card.playerName === pokeTargetPlayer)
-      .pop();
-    if (!targetCard) return;
-
     if (pokeDonePlayers.includes(playerNameRef.current!)) return;
 
-    const normalizedGuess = input.trim();
-    const isCorrect = normalizedGuess === targetCard.filterCategory;
-
-    dispatch({ type: "SET_POKE_RESULT", result: isCorrect });
-
-    setTimeout(() => {
-      dispatch({ type: "SET_POKE_TARGET_PLAYER", playerName: null });
-      dispatch({ type: "SET_POKE_RESULT", result: null });
-    }, 500);
+    // サーバーで判定するのでクライアントで判定しない
+    dispatch({ type: "SET_POKE_RESULT", result: null }); // 判定前リセット
 
     socket?.emit("pokeResult", {
       attackerName: playerNameRef.current,
       targetName: pokeTargetPlayer,
-      isCorrect,
-      turnIndex: targetCard.turnIndex,
+      guess: input.trim(), // 予想をそのまま送る
     });
 
-    if (isCorrect) {
-      const score = getScoreForTurn(targetCard.turnIndex);
-      dispatch({ type: "SET_POKE_SCORE_CHANGE", score });
-      socket?.emit("removeCard", { targetPlayerName: pokeTargetPlayer });
-    } else {
-      dispatch({ type: "SET_POKE_SCORE_CHANGE", score: null });
-    }
+    dispatch({ type: "SET_POKE_TARGET_PLAYER", playerName: null });
   };
 
   const handlePoke = (targetPlayerName: string) => {
@@ -377,6 +357,37 @@ export function Game() {
   const closePopup = () => {
     dispatch({ type: "SET_POKE_RESULT", result: null });
   };
+
+  // 追加: サーバーからのpoke結果受信イベントを処理
+  useEffect(() => {
+    if (!socket) return;
+
+    const handlePokeResult = ({
+      attackerName,
+      targetName,
+      isCorrect,
+      turnIndex,
+      scoreChange,
+    }: {
+      attackerName: string;
+      targetName: string;
+      isCorrect: boolean;
+      turnIndex: number;
+      scoreChange: number | null;
+    }) => {
+      if (playerName === attackerName) {
+        dispatch({ type: "SET_POKE_RESULT", result: isCorrect });
+        dispatch({ type: "SET_POKE_SCORE_CHANGE", score: scoreChange });
+      }
+      // サーバーからカード削除イベントも来るので、ここでは状態更新だけ
+    };
+
+    socket.on("pokeResultNotification", handlePokeResult);
+
+    return () => {
+      socket.off("pokeResultNotification", handlePokeResult);
+    };
+  }, [socket, playerName]);
 
   return (
     <>
