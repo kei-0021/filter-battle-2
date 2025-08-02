@@ -12,7 +12,7 @@ import {
 } from "../constants.js";
 import filters from "../data/filters.json" with { type: "json" };
 import themes from "../data/themes.json" with { type: "json" };
-import { SubmittedCardData } from "../types/gameTypes.js";
+import { Player, SubmittedCardData } from "../types/gameTypes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,7 +47,7 @@ app.get("*", (_, res) => {
   res.sendFile(path.join(distPath, "index.html"));
 });
 
-const players = new Map<string, { name: string; score: number }>();
+const players = new Map<string, Player>();
 const submittedCardsInThisRound = new Map<string, number>();
 const submittedCards = new Map<string, SubmittedCardData>(); // ここはstringキーのMap
 const pokeHistory = new Map<string, boolean>();
@@ -99,14 +99,18 @@ io.on("connection", (socket) => {
 
   socket.on("join", (name) => {
     if (!players.has(socket.id)) {
-      players.set(socket.id, { name, score: 0 });
+      players.set(socket.id, { name, score: 0, filterCategory: "" });
     }
 
     const usedFilters = new Set<string>();
     for (const card of submittedCards.values()) {
       usedFilters.add(card.filterCategory);
     }
+    const player = players.get(socket.id);
     const assignedFilter = chooseRandomFilterCategory(usedFilters);
+    if (player) {
+      player.filterCategory = assignedFilter;
+    }
     socket.emit("filterAssigned", { category: assignedFilter });
     // 使うときにキーを作る例
     submittedCardsInThisRound.set(socket.id, -1);
@@ -326,6 +330,7 @@ io.on("connection", (socket) => {
               io.emit("bonusPointNotification", {
                 playerName,
                 bonusPoints: totalScore,
+                filterCategory: player.filterCategory, // 追加
               });
             }
           }

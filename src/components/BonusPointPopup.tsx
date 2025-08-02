@@ -3,10 +3,12 @@ import { useEffect } from "react";
 export function BonusPointPopup({
   playerName,
   bonusPoints,
+  filterCategory,
   onClose,
 }: {
   playerName: string;
   bonusPoints: number;
+  filterCategory: string;
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -19,7 +21,10 @@ export function BonusPointPopup({
       <div
         style={{
           position: "fixed",
-          top: 0, left: 0, right: 0, bottom: 0,
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
           backgroundColor: "rgba(0, 0, 0, 0.5)",
           zIndex: 1000,
         }}
@@ -28,37 +33,44 @@ export function BonusPointPopup({
       <div
         style={{
           position: "fixed",
-          top: "50%", left: "50%",
+          top: "50%",
+          left: "50%",
           transform: "translate(-50%, -50%)",
           backgroundColor: "#222",
           color: "#fff",
-          padding: "1.5rem 2rem",
-          borderRadius: "8px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+          padding: "2rem 3rem",
+          borderRadius: "12px",
+          boxShadow: "0 6px 20px rgba(0,0,0,0.5)",
           fontSize: "1.2rem",
           fontWeight: "bold",
           zIndex: 1001,
           userSelect: "none",
           textAlign: "center",
-          minWidth: "250px",
+          whiteSpace: "pre-line",
+          lineHeight: "1.6",
         }}
       >
-        <div>🎉 {playerName}さんにボーナスポイント +{bonusPoints} ポイント！ 🎉</div>
-        <button
-          onClick={onClose}
-          style={{
-            marginTop: "1rem",
-            padding: "0.5rem 1rem",
-            backgroundColor: "#fbc02d",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-            fontWeight: "bold",
-            color: "#222",
-          }}
-        >
-          閉じる
-        </button>
+        🎉 {playerName}さんにボーナスポイント！ 🎉{"\n"}
+        +{bonusPoints}点{"\n"}
+        フィルター：{filterCategory}
+
+        <div style={{ marginTop: "1.2rem" }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: "0.6rem 1.2rem",
+              backgroundColor: "#fbc02d",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontWeight: "bold",
+              color: "#222",
+              fontSize: "1rem",
+            }}
+          >
+            閉じる
+          </button>
+        </div>
       </div>
     </>
   );

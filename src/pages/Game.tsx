@@ -72,7 +72,7 @@ export function Game() {
     guess: string; // ← ★追加
   } | null>(null);
   const [bonusPointNotifications, setBonusPointNotifications] = useState<
-    { playerName: string; bonusPoints: number; id: number }[]
+    { playerName: string; bonusPoints: number; filterCategory: string; id: number }[]
   >([]);
   const [pokeDonePlayers, setPokeDonePlayers] = useState<string[]>([]);
 
@@ -185,7 +185,7 @@ export function Game() {
     };
 
     let idCounter = 0;
-      const handleBonusPointNotification = (data: { playerName: string; bonusPoints: number }) => {
+      const handleBonusPointNotification = (data: { playerName: string; bonusPoints: number; filterCategory: string }) => {
         setBonusPointNotifications((prev) => [
           ...prev,
           { ...data, id: idCounter++ },
@@ -502,11 +502,12 @@ export function Game() {
         guess={pokeNotification?.guess} // ← ★ここを追加！
         onClose={closePokeNotification}
       />
-      {bonusPointNotifications.map(({ playerName, bonusPoints, id }) => (
+      {bonusPointNotifications.map(({ playerName, bonusPoints, filterCategory, id }) => (
         <BonusPointPopup
           key={id}
           playerName={playerName}
           bonusPoints={bonusPoints}
+          filterCategory={filterCategory} // ← 🟢 OK！ これで map 内の変数が正しく使える
           onClose={() =>
             setBonusPointNotifications((prev) => prev.filter((item) => item.id !== id))
           }
