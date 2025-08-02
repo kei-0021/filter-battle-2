@@ -20,6 +20,7 @@ import {
 } from "../components";
 import {
   COMPOSING_TIME_LIMIT,
+  POKING_TIME_LIMIT,
   THINKING_TIME_LIMIT
 } from "../constants.js";
 import filters from "../data/filters.json" with { type: "json" };
@@ -50,6 +51,12 @@ export function Game() {
     allSubmitted,
   } = state;
 
+  const [pokeNotification, setPokeNotification] = useState<{
+    attackerName: string;
+    targetName: string;
+    isCorrect: boolean;
+    scoreChange: number | null;
+  } | null>(null);
   const [pokeDonePlayers, setPokeDonePlayers] = useState<string[]>([]);
 
   // 最新stateを保持するRefs
@@ -366,20 +373,14 @@ export function Game() {
       attackerName,
       targetName,
       isCorrect,
-      turnIndex,
       scoreChange,
     }: {
       attackerName: string;
       targetName: string;
       isCorrect: boolean;
-      turnIndex: number;
       scoreChange: number | null;
     }) => {
-      if (playerName === attackerName) {
-        dispatch({ type: "SET_POKE_RESULT", result: isCorrect });
-        dispatch({ type: "SET_POKE_SCORE_CHANGE", score: scoreChange });
-      }
-      // サーバーからカード削除イベントも来るので、ここでは状態更新だけ
+      setPokeNotification({ attackerName, targetName, isCorrect, scoreChange });
     };
 
     socket.on("pokeResultNotification", handlePokeResult);
@@ -388,6 +389,8 @@ export function Game() {
       socket.off("pokeResultNotification", handlePokeResult);
     };
   }, [socket, playerName]);
+
+  const closePokeNotification = () => setPokeNotification(null);
 
   return (
     <>
@@ -404,7 +407,7 @@ export function Game() {
             : phase === "thinking"
             ? THINKING_TIME_LIMIT
             : phase === "poking"
-            ? COMPOSING_TIME_LIMIT
+            ? POKING_TIME_LIMIT  // ここを修正
             : 0
         }
         onTimeUp={handleTimerEnd}
@@ -462,9 +465,11 @@ export function Game() {
         onClose={() => dispatch({ type: "SET_POKE_TARGET_PLAYER", playerName: null })}
       />
       <PokeResultPopup
-        result={pokeResult}
-        scoreChange={pokeScoreChange}
-        onClose={closePopup}
+        isCorrect={pokeNotification?.isCorrect ?? null}
+        scoreChange={pokeNotification?.scoreChange ?? null}
+        attackerName={pokeNotification?.attackerName}
+        targetName={pokeNotification?.targetName}
+        onClose={closePokeNotification}
       />
       <RuleButton onClick={() => setIsRuleOpen(true)} />
       <RuleModal open={isRuleOpen} onClose={() => setIsRuleOpen(false)} />
