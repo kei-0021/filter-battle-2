@@ -1,4 +1,5 @@
 // src/components/index.ts
+export { BonusPointPopup } from "./BonusPointPopup";
 export { EntryField } from "./EntryField";
 export { GameHeader } from "./GameHeader";
 export { PokeInputPopup } from "./PokeInputPopup";

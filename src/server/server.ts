@@ -323,6 +323,10 @@ io.on("connection", (socket) => {
               console.log(`プレイヤー ${playerName} のカード一覧:`, playerCards);
               player.score += totalScore;
               console.log(`プレイヤーにボーナスポイント (${playerName}) +${totalScore}`);
+              io.emit("bonusPointNotification", {
+                playerName,
+                bonusPoints: totalScore,
+              });
             }
           }
 

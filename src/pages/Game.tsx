@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import {
+  BonusPointPopup,
   EntryField,
   GameHeader,
   PokeInputPopup,
@@ -16,7 +17,7 @@ import {
   RuleModal,
   ScoreBoard,
   SubmittedCardsArea,
-  Timer,
+  Timer
 } from "../components";
 import {
   COMPOSING_TIME_LIMIT,
@@ -70,6 +71,9 @@ export function Game() {
     scoreChange: number | null;
     guess: string; // ← ★追加
   } | null>(null);
+  const [bonusPointNotifications, setBonusPointNotifications] = useState<
+    { playerName: string; bonusPoints: number; id: number }[]
+  >([]);
   const [pokeDonePlayers, setPokeDonePlayers] = useState<string[]>([]);
 
   // 最新stateを保持するRefs
@@ -180,6 +184,14 @@ export function Game() {
       setPokeDonePlayers(donePlayers);
     };
 
+    let idCounter = 0;
+      const handleBonusPointNotification = (data: { playerName: string; bonusPoints: number }) => {
+        setBonusPointNotifications((prev) => [
+          ...prev,
+          { ...data, id: idCounter++ },
+        ]);
+      };
+
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
     socket.on("filterAssigned", handleFilterAssigned);
@@ -191,6 +203,7 @@ export function Game() {
     socket.on("removeCard", handleRemoveCard);
     socket.on("startPoking", handleStartPoking);
     socket.on("pokeDonePlayersUpdate", handlePokeDonePlayersUpdate);
+    socket.on("bonusPointNotification", handleBonusPointNotification);
 
     return () => {
       socket.off("connect", handleConnect);
@@ -204,6 +217,7 @@ export function Game() {
       socket.off("removeCard", handleRemoveCard);
       socket.off("startPoking", handleStartPoking);
       socket.off("pokeDonePlayersUpdate", handlePokeDonePlayersUpdate);
+      socket.off("bonusPointNotification", handleBonusPointNotification);
     };
   }, [socket]);
 
@@ -488,6 +502,16 @@ export function Game() {
         guess={pokeNotification?.guess} // ← ★ここを追加！
         onClose={closePokeNotification}
       />
+      {bonusPointNotifications.map(({ playerName, bonusPoints, id }) => (
+        <BonusPointPopup
+          key={id}
+          playerName={playerName}
+          bonusPoints={bonusPoints}
+          onClose={() =>
+            setBonusPointNotifications((prev) => prev.filter((item) => item.id !== id))
+          }
+        />
+      ))}
       <RuleButton onClick={() => setIsRuleOpen(true)} />
       <RuleModal open={isRuleOpen} onClose={() => setIsRuleOpen(false)} />
     </>
