@@ -56,6 +56,7 @@ export function Game() {
     targetName: string;
     isCorrect: boolean;
     scoreChange: number | null;
+    guess: string; // ← ★追加
   } | null>(null);
   const [pokeDonePlayers, setPokeDonePlayers] = useState<string[]>([]);
 
@@ -374,13 +375,15 @@ export function Game() {
       targetName,
       isCorrect,
       scoreChange,
+      guess, // ← ★ここも追加
     }: {
       attackerName: string;
       targetName: string;
       isCorrect: boolean;
       scoreChange: number | null;
+      guess: string;
     }) => {
-      setPokeNotification({ attackerName, targetName, isCorrect, scoreChange });
+      setPokeNotification({ attackerName, targetName, isCorrect, scoreChange, guess });
     };
 
     socket.on("pokeResultNotification", handlePokeResult);
@@ -469,6 +472,7 @@ export function Game() {
         scoreChange={pokeNotification?.scoreChange ?? null}
         attackerName={pokeNotification?.attackerName}
         targetName={pokeNotification?.targetName}
+        guess={pokeNotification?.guess} // ← ★ここを追加！
         onClose={closePokeNotification}
       />
       <RuleButton onClick={() => setIsRuleOpen(true)} />

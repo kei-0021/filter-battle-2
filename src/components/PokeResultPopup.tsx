@@ -5,6 +5,7 @@ type PokeResultPopupProps = {
   scoreChange: number | null;
   attackerName?: string;
   targetName?: string;
+  guess?: string; // ← これを追加！
   onClose: () => void;
 };
 
@@ -13,11 +14,12 @@ export function PokeResultPopup({
   scoreChange,
   attackerName,
   targetName,
+  guess,
   onClose,
 }: PokeResultPopupProps) {
   useEffect(() => {
     if (isCorrect !== null) {
-      const timer = setTimeout(onClose, 1000); // 表示時間は1秒に調整
+      const timer = setTimeout(onClose, 10000); // 表示時間は10秒に調整
       return () => clearTimeout(timer);
     }
   }, [isCorrect, onClose]);
@@ -54,12 +56,12 @@ export function PokeResultPopup({
         }}
       >
         <div style={{ marginBottom: "0.5em" }}>
-          {attackerName} さんが {targetName} さんをつつきました。
+          {attackerName} が {targetName} をつつきました。
         </div>
           <div>
             {isCorrect
-              ? `🎯 正解！ +${scoreChange ?? "?"}点`
-              : `❌ ${attackerName} は ${targetName} を外しました -${scoreChange ?? "?"}点`}
+              ? `🎯「${guess}」で正解！ +${scoreChange ?? "?"}点`
+              : `❌「${guess}」で外しました ${scoreChange ?? "?"}点`}
           </div>
       </div>
     </>

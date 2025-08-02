@@ -163,6 +163,7 @@ io.on("connection", (socket) => {
         isCorrect: false,
         turnIndex: null,
         scoreChange: null,
+        guess, // ← ★追加
       });
       return;
     }
@@ -203,6 +204,7 @@ io.on("connection", (socket) => {
       isCorrect,
       turnIndex: targetCard.turnIndex,
       scoreChange: isCorrect ? getScoreForTurn(targetCard.turnIndex) : SCORE_FAILED_POKE * -1,
+      guess, // ← これが必要
     });
   });
 
