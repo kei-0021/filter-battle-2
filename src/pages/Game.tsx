@@ -64,6 +64,8 @@ export function Game() {
     return allowedCategories.includes(value as Category);
   }
 
+  const [pokeTarget, setPokeTarget] = useState<{playerName: string; turnIndex: number} | null>(null);
+  const [pokeDonePlayers, setPokeDonePlayers] = useState<string[]>([]);
   const [pokeNotification, setPokeNotification] = useState<{
     attackerName: string;
     targetName: string;
@@ -74,7 +76,6 @@ export function Game() {
   const [bonusPointNotifications, setBonusPointNotifications] = useState<
     { playerName: string; bonusPoints: number; filterCategory: string; id: number }[]
   >([]);
-  const [pokeDonePlayers, setPokeDonePlayers] = useState<string[]>([]);
 
   // 最新stateを保持するRefs
   const phaseRef = useRef(phase);
@@ -167,12 +168,18 @@ export function Game() {
       targetPlayerName: string;
       turnIndex: number;
     }) => {
+      console.log("[🗑️ カード削除前のカード数]", submittedCardsRef.current.length);
+      console.log("[🗑️ 削除対象]", targetPlayerName, turnIndex);
+      const newCards = submittedCardsRef.current.filter(
+        (card) =>
+          !(card.playerName === targetPlayerName && card.turnIndex === turnIndex)
+      );
+      console.log("[🗑️ カード削除後のカード数]", newCards.length);
+
+      submittedCardsRef.current = newCards;  // ← ここを追加！
       dispatch({
         type: "SET_SUBMITTED_CARDS",
-        submittedCards: submittedCardsRef.current.filter(
-          (card) =>
-            !(card.playerName === targetPlayerName && card.turnIndex === turnIndex)
-        ),
+        submittedCards: newCards,
       });
     };
 
@@ -322,14 +329,14 @@ export function Game() {
   };
 
   const handleTimerEnd = useCallback(() => {
-    console.log("[handleTimerEnd] called", {
-      phase: phaseRef.current,
-      timerEnded: timerEndedRef.current,
-      text: `"${textRef.current}"`,
-    });
+    // console.log("[handleTimerEnd] called", {
+    //   phase: phaseRef.current,
+    //   timerEnded: timerEndedRef.current,
+    //   text: `"${textRef.current}"`,
+    // });
 
     if (timerEndedRef.current) {
-      console.log("[handleTimerEnd] ignored: already ended");
+      // console.log("[handleTimerEnd] ignored: already ended");
       return;
     }
     timerEndedRef.current = true;
@@ -354,7 +361,7 @@ export function Game() {
   }, [socket, handleSubmit]);
 
   useEffect(() => {
-    console.log("[timerEndedRef reset]", { phase, timerResetTrigger });
+    // console.log("[timerEndedRef reset]", { phase, timerResetTrigger });
     timerEndedRef.current = false;
   }, [timerResetTrigger, phase]);
 
@@ -363,30 +370,26 @@ export function Game() {
   };
 
   const handlePokeSubmit = (input: string) => {
-    if (!pokeTargetPlayer) return;
-
+    if (!pokeTarget) return;
     if (pokeDonePlayers.includes(playerNameRef.current!)) return;
 
-    // サーバーで判定するのでクライアントで判定しない
-    dispatch({ type: "SET_POKE_RESULT", result: null }); // 判定前リセット
+    dispatch({ type: "SET_POKE_RESULT", result: null });
 
     socket?.emit("pokeResult", {
       attackerName: playerNameRef.current,
-      targetName: pokeTargetPlayer,
-      guess: input.trim(), // 予想をそのまま送る
+      targetName: pokeTarget.playerName,
+      turnIndex: pokeTarget.turnIndex,
+      guess: input.trim(),
     });
 
-    dispatch({ type: "SET_POKE_TARGET_PLAYER", playerName: null });
+    setPokeTarget(null);
   };
 
-  const handlePoke = (targetPlayerName: string) => {
-    if (
-      playerName &&
-      (pokeDonePlayers.includes(playerName) || targetPlayerName === playerName)
-    ) {
+  const handlePoke = (targetPlayerName: string, turnIndex: number) => {
+    if (playerName && (pokeDonePlayers.includes(playerName) || targetPlayerName === playerName)) {
       return;
     }
-    dispatch({ type: "SET_POKE_TARGET_PLAYER", playerName: targetPlayerName });
+    setPokeTarget({ playerName: targetPlayerName, turnIndex });
   };
 
   const closePopup = () => {
@@ -490,9 +493,10 @@ export function Game() {
       />
 
       <PokeInputPopup
-        targetPlayerName={pokeTargetPlayer}
+        targetPlayerName={pokeTarget?.playerName || null}
+        turnIndex={pokeTarget?.turnIndex ?? null}
         onSubmit={handlePokeSubmit}
-        onClose={() => dispatch({ type: "SET_POKE_TARGET_PLAYER", playerName: null })}
+        onClose={() => setPokeTarget(null)}
       />
       <PokeResultPopup
         isCorrect={pokeNotification?.isCorrect ?? null}

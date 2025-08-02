@@ -12,7 +12,7 @@ type SubmittedCardsAreaProps = {
   phase: GamePhase;
   pokeTargetPlayer: string | null;
   pokeResult: boolean | null;
-  onPoke: (targetPlayerName: string) => void;
+  onPoke: (targetPlayerName: string, turnIndex: number) => void;
   // ここにpoke済みプレイヤーのリストを追加
   pokeDonePlayers: string[];
   currentRound: number
@@ -92,7 +92,7 @@ export const SubmittedCardsArea: React.FC<SubmittedCardsAreaProps> = ({
               showPokeButton={canShowPokeButton}
               useBubbleStyle={true}
               pokeResult={isPopped ? true : null}
-              onPoke={() => onPoke(card.playerName)}
+              onPoke={() => onPoke(card.playerName, card.turnIndex)}
               phase={phase}
               roundIndex={card.round}
               currentRoundIndex={currentRound}

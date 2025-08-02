@@ -2,6 +2,7 @@ import { KeyboardEvent, useEffect, useState } from "react";
 
 type PokeInputPopupProps = {
   targetPlayerName: string | null;
+  turnIndex?: number | null;  // ここを追加
   onSubmit: (input: string) => void;
   onClose: () => void;
 };
