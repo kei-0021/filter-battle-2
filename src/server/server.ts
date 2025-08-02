@@ -49,7 +49,7 @@ app.get("*", (_, res) => {
 
 const players = new Map<string, { name: string; score: number }>();
 const submittedCardsInThisRound = new Map<string, number>();
-const submittedCards = new Map<string, SubmittedCardData>();
+const submittedCards = new Map<string, SubmittedCardData>(); // ここはstringキーのMap
 const pokeHistory = new Map<string, boolean>();
 const timeUpMap = {
   composing: new Set<string>(),
@@ -108,6 +108,7 @@ io.on("connection", (socket) => {
     }
     const assignedFilter = chooseRandomFilterCategory(usedFilters);
     socket.emit("filterAssigned", { category: assignedFilter });
+    // 使うときにキーを作る例
     submittedCardsInThisRound.set(socket.id, -1);
 
     console.log(`[JOIN] ${name} (${socket.id})`);
@@ -131,15 +132,16 @@ io.on("connection", (socket) => {
 
   socket.on("submit", (data: SubmittedCardData) => {
     submittedCardsInThisRound.set(socket.id, currentRound);
-    submittedCards.set(socket.id, data);
+    const cardKey = `${socket.id}_${data.round}`;
+    submittedCards.set(cardKey, data);
     io.emit("newSubmission", data);
 
     const allSubmitted = [...submittedCardsInThisRound.values()].every(
       (roundNum) => roundNum === currentRound
     );
-
+    const card = data;
     console.log(
-      `[SUBMIT] currentRound=${currentRound}, phase=${phase}, submissions=${JSON.stringify(
+      `[SUBMIT] name=${card.playerName}, turnIndex=${card.turnIndex}, score=${getScoreForTurn(card.turnIndex)}, currentRound=${currentRound}, phase=${phase}, submissions=${JSON.stringify(
         [...submittedCardsInThisRound.entries()]
       )}, allSubmitted=${allSubmitted}`
     );
@@ -211,18 +213,18 @@ io.on("connection", (socket) => {
       // 2. 新しいフィルターを取得（使えるものがなければ全体からランダムに選ぶ）
       const newFilter = chooseRandomFilterCategory(usedFilters);
 
-      // 3. カードを削除
-      for (const [socketId, card] of submittedCards.entries()) {
+      // 3. カードを削除　＆　4. 新しいフィルター通知　＆　5. 削除通知
+      for (const [cardKey, card] of submittedCards.entries()) {
         if (card.playerName === targetName) {
-          submittedCards.delete(socketId);
+          submittedCards.delete(cardKey);
 
-          // 4. 新しいフィルターをクライアントに通知
-          io.to(socketId).emit("filterAssigned", { category: newFilter });
+          // 新しいフィルターをクライアントに通知
+          io.to(cardKey.split('_')[0]).emit("filterAssigned", { category: newFilter });
 
-          // 5. 全体にカード削除を通知（UIでカードを消す用）
+          // 全体にカード削除を通知（UIでカードを消す用）
           io.emit("removeCard", { targetPlayerName: targetName, turnIndex: card.turnIndex });
 
-          break;
+          break; // 1枚だけ削除するならbreak
         }
       }
     }
@@ -299,8 +301,36 @@ io.on("connection", (socket) => {
       } else if (phase === "poking") {
         phase = "finished";
         broadcastPhase();
-      }
 
+        const scoredPlayers = new Set<string>();
+        for (const card of submittedCards.values()) {
+          const playerName = card.playerName;
+
+          if (scoredPlayers.has(playerName)) continue;
+
+          const playerCards = [...submittedCards.values()].filter(
+            (c) => c.playerName === playerName
+          );
+
+          const hasOnePointCard = playerCards.some((c) => c.score === 1);
+
+          if (hasOnePointCard) {
+            // ✅ ここで score プロパティを直接合計する
+            const totalScore = playerCards.reduce((sum, c) => sum + c.score, 0);
+
+            const player = [...players.values()].find((p) => p.name === playerName);
+            if (player) {
+              console.log(`プレイヤー ${playerName} のカード一覧:`, playerCards);
+              player.score += totalScore;
+              console.log(`プレイヤーにボーナスポイント (${playerName}) +${totalScore}`);
+            }
+          }
+
+          scoredPlayers.add(playerName);
+        }
+
+        broadcastPlayers();
+      }
       set.clear();
     }
   });

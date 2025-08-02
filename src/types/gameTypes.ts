@@ -9,6 +9,7 @@ export type SubmittedCardData = {
   filterCategory: string; // 変更: keyof typeof filtersからstringに変更
   turnIndex: number;
   round: number;
+  score: number; // ← これを追加！
 };
 
 export type Player = {

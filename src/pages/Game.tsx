@@ -20,6 +20,7 @@ import {
 } from "../components";
 import {
   COMPOSING_TIME_LIMIT,
+  getScoreForTurn,
   POKING_TIME_LIMIT,
   THINKING_TIME_LIMIT
 } from "../constants.js";
@@ -286,6 +287,7 @@ export function Game() {
         filterCategory: selectedCategoryRef.current || "", // ← ★修正！,
         turnIndex: currentTurnIndex,
         round: currentRoundRef.current,
+        score: getScoreForTurn(currentTurnIndex), // ← これを追加
       };
       console.log("[handleSubmit] emitting submit", newCard);
       socket?.emit("submit", newCard);
