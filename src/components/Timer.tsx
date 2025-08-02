@@ -14,7 +14,7 @@ export function Timer({ duration, onTimeUp, resetTrigger, isActive }: TimerProps
   // resetTrigger または isActive 変化時にリセット
   useEffect(() => {
     if (!isActive) return;
-    console.log("[🕑タイマーセット] %d s" , duration)
+    console.log("[🕑 タイマーセット] %d s" , duration)
     hasCalledTimeUpRef.current = false;
     setTimeLeft(duration);
   }, [duration, resetTrigger, isActive]);

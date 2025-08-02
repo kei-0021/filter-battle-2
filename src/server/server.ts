@@ -10,6 +10,7 @@ import {
   SCORE_FAILED_POKE,
   THINKING_TIME_LIMIT,
 } from "../constants.js";
+import filters from "../data/filters.json" with { type: "json" };
 import themes from "../data/themes.json" with { type: "json" };
 import { SubmittedCardData } from "../types/gameTypes.js";
 
@@ -47,8 +48,8 @@ app.get("*", (_, res) => {
 });
 
 const players = new Map<string, { name: string; score: number }>();
-const submittedCardsInThisRound = new Map<string, number>(); // socket.id → 提出ラウンド番号 or -1 未提出
-const submittedCards = new Map<string, SubmittedCardData>(); // socket.id → カードデータ
+const submittedCardsInThisRound = new Map<string, number>();
+const submittedCards = new Map<string, SubmittedCardData>();
 const pokeHistory = new Map<string, boolean>();
 const timeUpMap = {
   composing: new Set<string>(),
@@ -67,6 +68,17 @@ const chooseRandomTheme = () => {
   const idx = Math.floor(Math.random() * themes.length);
   return themes[idx];
 };
+
+function chooseRandomFilterCategory(usedFilters: Set<string>): string {
+  const filterCategories = Object.keys(filters);
+  const availableFilters = filterCategories.filter(
+    (filter) => !usedFilters.has(filter)
+  );
+  if (availableFilters.length === 0) {
+    return filterCategories[Math.floor(Math.random() * filterCategories.length)];
+  }
+  return availableFilters[Math.floor(Math.random() * availableFilters.length)];
+}
 
 const broadcastPlayers = () => {
   io.emit("playersUpdate", Array.from(players.values()));
@@ -89,6 +101,13 @@ io.on("connection", (socket) => {
     if (!players.has(socket.id)) {
       players.set(socket.id, { name, score: 0 });
     }
+
+    const usedFilters = new Set<string>();
+    for (const card of submittedCards.values()) {
+      usedFilters.add(card.filterCategory);
+    }
+    const assignedFilter = chooseRandomFilterCategory(usedFilters);
+    socket.emit("filterAssigned", { category: assignedFilter });
     submittedCardsInThisRound.set(socket.id, -1);
 
     console.log(`[JOIN] ${name} (${socket.id})`);
@@ -141,13 +160,11 @@ io.on("connection", (socket) => {
   });
 
   socket.on("pokeResult", ({ attackerName, targetName, guess }) => {
-    if (pokeHistory.has(attackerName)) return; // 既にpoke済みなら無視
+    if (pokeHistory.has(attackerName)) return;
 
-    // poke済みにセット
     pokeHistory.set(attackerName, true);
     broadcastPokeHistory();
 
-    // 対象のカードを探す
     let targetCard: SubmittedCardData | undefined;
     for (const card of submittedCards.values()) {
       if (card.playerName === targetName) {
@@ -156,21 +173,19 @@ io.on("connection", (socket) => {
       }
     }
     if (!targetCard) {
-      // カードが見つからなければ不正解扱い
       io.to(attackerName).emit("pokeResultNotification", {
         attackerName,
         targetName,
         isCorrect: false,
         turnIndex: null,
         scoreChange: null,
-        guess, // ← ★追加
+        guess,
       });
       return;
     }
 
     const isCorrect = guess === targetCard.filterCategory;
 
-    // スコア更新
     for (const player of players.values()) {
       if (isCorrect) {
         if (player.name === attackerName) {
@@ -185,18 +200,34 @@ io.on("connection", (socket) => {
         }
       }
     }
-    broadcastPlayers();
 
     if (isCorrect) {
-      // カード削除
+      // 1. 使われているフィルターを取得
+      const usedFilters = new Set<string>();
+      for (const card of submittedCards.values()) {
+        usedFilters.add(card.filterCategory);
+      }
+
+      // 2. 新しいフィルターを取得（使えるものがなければ全体からランダムに選ぶ）
+      const newFilter = chooseRandomFilterCategory(usedFilters);
+
+      // 3. カードを削除
       for (const [socketId, card] of submittedCards.entries()) {
         if (card.playerName === targetName) {
           submittedCards.delete(socketId);
+
+          // 4. 新しいフィルターをクライアントに通知
+          io.to(socketId).emit("filterAssigned", { category: newFilter });
+
+          // 5. 全体にカード削除を通知（UIでカードを消す用）
+          io.emit("removeCard", { targetPlayerName: targetName, turnIndex: card.turnIndex });
+
           break;
         }
       }
-      io.emit("removeCard", { targetPlayerName: targetName, turnIndex: targetCard.turnIndex });
     }
+
+    broadcastPlayers();
 
     io.emit("pokeResultNotification", {
       attackerName,
@@ -204,7 +235,7 @@ io.on("connection", (socket) => {
       isCorrect,
       turnIndex: targetCard.turnIndex,
       scoreChange: isCorrect ? getScoreForTurn(targetCard.turnIndex) : SCORE_FAILED_POKE * -1,
-      guess, // ← これが必要
+      guess,
     });
   });
 
@@ -222,7 +253,7 @@ io.on("connection", (socket) => {
     }
     pokeHistory.clear();
 
-    broadcastPlayers();  // ここでプレイヤー情報を送る
+    broadcastPlayers();
     io.emit("pokeDonePlayersUpdate", []);
     io.emit("roundUpdate", { newTheme: currentTheme, currentRound });
     io.emit("allSubmittedStatus", false);
@@ -240,7 +271,7 @@ io.on("connection", (socket) => {
 
   socket.on("timeUp", ({ phase: clientPhase }) => {
     if (clientPhase !== phase) return;
-    if (phase === "finished") return; // ← この行を追加
+    if (phase === "finished") return;
 
     console.log(`[timeUp] phase=${phase}, received from ${socket.id}`);
 
@@ -261,18 +292,16 @@ io.on("connection", (socket) => {
           broadcastPhase();
           io.emit("startPoking");
         }, THINKING_TIME_LIMIT * 1000);
-
       } else if (phase === "thinking") {
         phase = "poking";
         broadcastPhase();
         io.emit("startPoking");
-
       } else if (phase === "poking") {
         phase = "finished";
         broadcastPhase();
       }
 
-      set.clear(); // 対象フェーズの timeUpPlayers をリセット
+      set.clear();
     }
   });
 

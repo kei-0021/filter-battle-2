@@ -23,7 +23,7 @@ import {
   POKING_TIME_LIMIT,
   THINKING_TIME_LIMIT
 } from "../constants.js";
-import filters from "../data/filters.json" with { type: "json" };
+import filters from "../data/filters.json";
 import { usePlayer } from "../PlayerContext.js";
 import { useSocket } from "../SocketContext.js";
 import { gameReducer, initialState } from "../state/gameReducer";
@@ -51,6 +51,17 @@ export function Game() {
     allSubmitted,
   } = state;
 
+  const allowedCategories = [
+    "", "先生", "休み時間", "テスト", "友達", "部活", "放課後",
+    "買い物", "習い事", "失敗", "学校", "遊び", "家", "通学",
+    "親", "兄弟", "体育", "夏休み", "文化祭", "修学旅行", "バイト"
+  ] as const;
+  type Category = typeof allowedCategories[number];
+  // 型ガード関数
+  function isCategory(value: string): value is Category {
+    return allowedCategories.includes(value as Category);
+  }
+
   const [pokeNotification, setPokeNotification] = useState<{
     attackerName: string;
     targetName: string;
@@ -74,7 +85,6 @@ export function Game() {
   useEffect(() => { phaseRef.current = phase; }, [phase]);
   useEffect(() => { textRef.current = text; }, [text]);
   useEffect(() => { errorRef.current = error; }, [error]);
-  useEffect(() => { selectedCategoryRef.current = selectedCategory; }, [selectedCategory]);
   useEffect(() => { submittedCardsRef.current = submittedCards; }, [submittedCards]);
   useEffect(() => { playerNameRef.current = playerName; }, [playerName]);
   useEffect(() => { themeRef.current = theme; }, [theme]);
@@ -89,22 +99,21 @@ export function Game() {
     currentRoundRef.current = state.currentRound;
   }, [state.currentRound]);
 
-  // 初期カテゴリ選択
-  useEffect(() => {
-    const categories = Object.keys(filters) as (keyof typeof filters)[];
-    const randomCategory = categories[Math.floor(Math.random() * categories.length)];
-    dispatch({
-      type: "SET_THEME",
-      theme: "",
-      selectedCategory: randomCategory,
-    });
-  }, []);
-
   useEffect(() => {
     if (!socket) return;
 
     const handleConnect = () => {};
     const handleDisconnect = () => { hasJoinedRef.current = false; };
+
+    const handleFilterAssigned = (data: { category: string }) => {
+      if (isCategory(data.category)) {
+        selectedCategoryRef.current = data.category; // ← ★追加！
+        dispatch({ type: "SET_THEME", theme: themeRef.current, selectedCategory: data.category });
+        console.log("[🫧 フィルター受信]", data.category)
+      } else {
+        console.warn("Unknown category received:", data.category);
+      }
+    };
 
     const handleNewSubmission = (data: SubmittedCardData) => {
       dispatch({ type: "ADD_SUBMISSION", card: data });
@@ -172,6 +181,7 @@ export function Game() {
 
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
+    socket.on("filterAssigned", handleFilterAssigned);
     socket.on("newSubmission", handleNewSubmission);
     socket.on("playersUpdate", handlePlayersUpdate);
     socket.on("roundUpdate", handleRoundUpdate);
@@ -184,6 +194,7 @@ export function Game() {
     return () => {
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
+      socket.off("filterAssigned", handleFilterAssigned);
       socket.off("newSubmission", handleNewSubmission);
       socket.off("playersUpdate", handlePlayersUpdate);
       socket.off("roundUpdate", handleRoundUpdate);
@@ -272,7 +283,7 @@ export function Game() {
         text: textRef.current,
         playerName: playerNameRef.current || "名無し",
         theme: themeRef.current,
-        filterCategory: selectedCategoryRef.current,
+        filterCategory: selectedCategoryRef.current || "", // ← ★修正！,
         turnIndex: currentTurnIndex,
         round: currentRoundRef.current,
       };
