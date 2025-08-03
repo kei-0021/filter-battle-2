@@ -313,10 +313,12 @@ export function Game() {
       ).length;
 
       const hasSubmittedThisTurn = submittedCardsRef.current.some(
-        (card) => card.playerName === playerNameRef.current && card.turnIndex === currentTurnIndex
+        (card) =>
+          card.playerName === playerNameRef.current &&
+          card.round === currentRoundRef.current
       );
 
-      if (!allowEmpty && hasSubmittedThisTurn) {
+      if (hasSubmittedThisTurn) {
         console.log("[handleSubmit] abort: already submitted this turn");
         return;
       }
