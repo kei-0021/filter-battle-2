@@ -6,12 +6,13 @@ import { Server } from "socket.io";
 import { fileURLToPath } from "url";
 import {
   getScoreForTurn,
+  KEYWORD_COUNT,
   SCORE_CORRECTLY_POKED,
   SCORE_FAILED_POKE,
   THINKING_TIME_LIMIT,
 } from "../constants.js";
 import { GamePhase, Player, SubmittedCardData } from "../types/gameTypes.js";
-import { chooseRandomFilterCategory, chooseRandomTheme } from "./choose.js";
+import { chooseRandomFilterCategory, chooseRandomTheme, getRandomFilterKeywords } from "./choose.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -95,7 +96,9 @@ io.on("connection", (socket) => {
     if (player) {
       player.filterCategory = assignedFilter;
     }
-    socket.emit("filterAssigned", { category: assignedFilter });
+    const keywords = getRandomFilterKeywords(assignedFilter, KEYWORD_COUNT);
+    console.log("[filter assigned]", keywords)
+    socket.emit("filterAssigned", { category: assignedFilter, keywords });
     // 使うときにキーを作る例
     submittedCardsInThisRound.set(socket.id, -1);
 
@@ -224,7 +227,9 @@ io.on("connection", (socket) => {
         });
 
         // 対象プレイヤーに新フィルター通知
-        io.to(targetSocketId).emit("filterAssigned", { category: newFilter });
+        const keywords = getRandomFilterKeywords(newFilter, KEYWORD_COUNT);
+        console.log("[filter assigned]", keywords)
+        io.to(targetSocketId).emit("filterAssigned", { category: newFilter, keywords });
       }
     }
 
@@ -350,7 +355,9 @@ io.on("connection", (socket) => {
               );
               if (targetPlayerEntry) {
                 const [targetSocketId] = targetPlayerEntry;
-                io.to(targetSocketId).emit("filterAssigned", { category: newFilter });
+                const keywords = getRandomFilterKeywords(newFilter, KEYWORD_COUNT);
+                console.log("[filter assigned]", keywords)
+                io.to(targetSocketId).emit("filterAssigned", { category: newFilter, keywords });
               }
             }
           }

@@ -1,6 +1,11 @@
 // constants.ts
 
 /**
+ * フィルターに対応するキーワードの配布される数
+ */
+export const KEYWORD_COUNT = 10;
+
+/**
  * ゲーム内でのカード提出に使うタイマーの時間制限（秒）
  */
 export const COMPOSING_TIME_LIMIT = 60;

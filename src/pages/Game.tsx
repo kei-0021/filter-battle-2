@@ -40,6 +40,7 @@ export function Game() {
     currentRound,
     theme,
     selectedCategory,
+    keywords,  // ここを追加
     text,
     isComposing,
     submittedCards,
@@ -89,6 +90,10 @@ export function Game() {
   const hasJoinedRef = useRef(false);
   const cardsContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const pendingFilterRef = useRef<{
+    category: FilterCategory;
+    keywords: string[];
+  } | null>(null);
 
   useEffect(() => {
     currentRoundRef.current = state.currentRound;
@@ -98,12 +103,25 @@ export function Game() {
     if (!socket) return;
 
     const handleConnect = () => {};
-    const handleDisconnect = () => { hasJoinedRef.current = false; };
+    const handleDisconnect = () => {
+      hasJoinedRef.current = false;
+    };
 
-    const handleFilterAssigned = (category: FilterCategory) => {
-      selectedCategoryRef.current = category; // ← ★追加！
-      dispatch({ type: "SET_THEME", theme: themeRef.current, selectedCategory: category });
-      console.log("[🫧 フィルター受信]", category)
+    const handleFilterAssigned = ({ category, keywords }: { category: FilterCategory; keywords: string[] }) => {
+      console.log("[🫧 handleFilterAssigned]", category, keywords);
+      selectedCategoryRef.current = category;
+
+      if (!themeRef.current) {
+        // テーマ未設定なら保留
+        pendingFilterRef.current = { category, keywords };
+        return;
+      }
+
+      dispatch({
+        type: "SET_CATEGORY_AND_KEYWORDS",
+        selectedCategory: category,
+        keywords,
+      });
     };
 
     const handleNewSubmission = (data: SubmittedCardData) => {
@@ -112,20 +130,34 @@ export function Game() {
 
     const handlePlayersUpdate = (updatedPlayers: Player[]) => {
       dispatch({ type: "SET_PLAYERS", players: updatedPlayers });
-      // dispatch({ type: "INCREMENT_TIMER_RESET" });  // タイマーリセット
     };
 
-    const handleRoundUpdate = (data: { newTheme: string, currentRound: number }) => {
-      console.log("[⭐️⭐️⭐️ ラウンド更新] ", data.currentRound)
-      dispatch({
-        type: "SET_THEME",
-        theme: data.newTheme,
-        selectedCategory: selectedCategoryRef.current,
-      });
-      dispatch({ type: "SET_CURRENT_ROUND", currentRound: data.currentRound });
+    // ラウンド更新時のテーマ・カテゴリ・キーワードセット処理の部分
+    const handleRoundUpdate = (data: { newTheme: string; currentRound: number }) => {
+      console.log("[⭐️⭐️⭐️ ラウンド更新] ", data.currentRound);
 
-      currentRoundRef.current = data.currentRound; // ← これを追加
+      themeRef.current = data.newTheme;
+      currentRoundRef.current = data.currentRound;
       setPokeDonePlayers([]);
+
+      if (pendingFilterRef.current) {
+        dispatch({
+          type: "SET_THEME",
+          theme: data.newTheme,
+          selectedCategory: pendingFilterRef.current.category,
+          keywords: pendingFilterRef.current.keywords,
+        });
+        pendingFilterRef.current = null;
+      } else {
+        dispatch({
+          type: "SET_THEME",
+          theme: data.newTheme,
+          selectedCategory: selectedCategoryRef.current,
+          // keywordsは渡さず、state保持のままにする
+        });
+      }
+
+      dispatch({ type: "SET_CURRENT_ROUND", currentRound: data.currentRound });
     };
 
     const handlePhaseUpdate = (newPhase: GamePhase) => {
@@ -134,9 +166,9 @@ export function Game() {
         return;
       }
       if (["composing", "thinking", "poking", "finished"].includes(newPhase)) {
-        console.log("[✨✨ フェーズ更新]:" , newPhase);
+        console.log("[✨✨ フェーズ更新]:", newPhase);
         phaseRef.current = newPhase;
-        submittingRef.current = false; // ← ここでリセットを即時行う
+        submittingRef.current = false;
         dispatch({ type: "SET_PHASE", phase: newPhase });
         dispatch({ type: "INCREMENT_TIMER_RESET" });
       }
@@ -146,22 +178,17 @@ export function Game() {
       dispatch({ type: "SET_ALL_SUBMITTED", allSubmitted });
     };
 
-    const handleRemoveCard = ({
-      targetPlayerName,
-      turnIndex,
-    }: {
-      targetPlayerName: string;
-      turnIndex: number;
-    }) => {
+    const handleRemoveCard = ({ targetPlayerName, turnIndex }: { targetPlayerName: string; turnIndex: number }) => {
       console.log("[🗑️ カード削除前のカード数]", submittedCardsRef.current.length);
       console.log("[🗑️ 削除対象]", targetPlayerName, turnIndex);
+
       const newCards = submittedCardsRef.current.filter(
-        (card) =>
-          !(card.playerName === targetPlayerName && card.turnIndex === turnIndex)
+        (card) => !(card.playerName === targetPlayerName && card.turnIndex === turnIndex)
       );
+
       console.log("[🗑️ カード削除後のカード数]", newCards.length);
 
-      submittedCardsRef.current = newCards;  // ← ここを追加！
+      submittedCardsRef.current = newCards;
       dispatch({
         type: "SET_SUBMITTED_CARDS",
         submittedCards: newCards,
@@ -177,19 +204,21 @@ export function Game() {
     };
 
     let idCounter = 0;
-      const handleBonusPointNotification = (data: { playerName: string; bonusPoints: number; filterCategory: string }) => {
-        setBonusPointNotifications((prev) => [
-          ...prev,
-          { ...data, id: idCounter++ },
-        ]);
-      };
+    const handleBonusPointNotification = (data: {
+      playerName: string;
+      bonusPoints: number;
+      filterCategory: string;
+    }) => {
+      setBonusPointNotifications((prev) => [
+        ...prev,
+        { ...data, id: idCounter++ },
+      ]);
+    };
 
+    // ------------------ socket.on登録 ------------------
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
-    socket.on("filterAssigned", ({ category }) => {
-      selectedCategoryRef.current = category;
-      dispatch({ type: "SET_THEME", theme: themeRef.current, selectedCategory: category });
-    });
+    socket.on("filterAssigned", handleFilterAssigned);
     socket.on("newSubmission", handleNewSubmission);
     socket.on("playersUpdate", handlePlayersUpdate);
     socket.on("roundUpdate", handleRoundUpdate);
@@ -200,6 +229,7 @@ export function Game() {
     socket.on("pokeDonePlayersUpdate", handlePokeDonePlayersUpdate);
     socket.on("bonusPointNotification", handleBonusPointNotification);
 
+    // クリーンアップ
     return () => {
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
@@ -225,6 +255,17 @@ export function Game() {
 
   useEffect(() => {
     inputRef.current?.focus();
+  }, [theme]);
+
+  useEffect(() => {
+    if (pendingFilterRef.current && themeRef.current) {
+      dispatch({
+        type: "SET_CATEGORY_AND_KEYWORDS",
+        selectedCategory: pendingFilterRef.current.category,
+        keywords: pendingFilterRef.current.keywords,
+      });
+      pendingFilterRef.current = null;
+    }
   }, [theme]);
 
   useEffect(() => {
@@ -423,7 +464,7 @@ export function Game() {
       <GameHeader
         theme={theme}
         selectedCategory={selectedCategory}
-        filterWords={selectedCategory ? filters[selectedCategory] : []}
+        filterWords={keywords}
       />
       <Timer
         key={timerResetTrigger} // ← 追加
