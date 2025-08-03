@@ -1,6 +1,6 @@
 // src/state/gameReducer.ts
 import filters from "../data/filters.json";
-import { GamePhase, Player, SubmittedCardData } from "../types/gameTypes";
+import { FilterCategory, GamePhase, Player, SubmittedCardData } from "../types/gameTypes";
 
 export type GameState = {
   /** 現在のラウンド */
@@ -8,7 +8,7 @@ export type GameState = {
   /** 現在のテーマ */
   theme: string;
   /** 選択中のカテゴリ */
-  selectedCategory: keyof typeof filters | "";
+  selectedCategory: FilterCategory | "";
   /** 選択中カテゴリに紐づくキーワード一覧 */
   keywords: string[];
   /** 入力中のテキスト */
@@ -37,7 +37,7 @@ export type GameState = {
 
 export type GameAction =
   | { type: "SET_CURRENT_ROUND"; currentRound: number }
-  | { type: "SET_THEME"; theme: string; selectedCategory: keyof typeof filters | "" }
+  | { type: "SET_THEME"; theme: string; selectedCategory: FilterCategory | "" }
   | { type: "SET_TEXT"; text: string }
   | { type: "ADD_SUBMISSION"; card: SubmittedCardData }
   | { type: "SET_POKE_RESULT"; result: boolean | null }

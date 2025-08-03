@@ -29,7 +29,7 @@ import filters from "../data/filters.json";
 import { usePlayer } from "../PlayerContext.js";
 import { useSocket } from "../SocketContext.js";
 import { gameReducer, initialState } from "../state/gameReducer";
-import { GamePhase, Player, SubmittedCardData } from "../types/gameTypes.js";
+import { FilterCategory, GamePhase, Player, SubmittedCardData } from "../types/gameTypes.js";
 
 export function Game() {
   const { playerName } = usePlayer();
@@ -52,17 +52,6 @@ export function Game() {
     phase,
     allSubmitted,
   } = state;
-
-  const allowedCategories = [
-    "", "先生", "休み時間", "テスト", "友達", "部活", "放課後",
-    "買い物", "習い事", "失敗", "学校", "遊び", "家", "通学",
-    "親", "兄弟", "体育", "夏休み", "文化祭", "修学旅行", "バイト"
-  ] as const;
-  type Category = typeof allowedCategories[number];
-  // 型ガード関数
-  function isCategory(value: string): value is Category {
-    return allowedCategories.includes(value as Category);
-  }
 
   const [pokeTarget, setPokeTarget] = useState<{playerName: string; turnIndex: number} | null>(null);
   const [pokeDonePlayers, setPokeDonePlayers] = useState<string[]>([]);
@@ -111,14 +100,10 @@ export function Game() {
     const handleConnect = () => {};
     const handleDisconnect = () => { hasJoinedRef.current = false; };
 
-    const handleFilterAssigned = (data: { category: string }) => {
-      if (isCategory(data.category)) {
-        selectedCategoryRef.current = data.category; // ← ★追加！
-        dispatch({ type: "SET_THEME", theme: themeRef.current, selectedCategory: data.category });
-        console.log("[🫧 フィルター受信]", data.category)
-      } else {
-        console.warn("Unknown category received:", data.category);
-      }
+    const handleFilterAssigned = (category: FilterCategory) => {
+      selectedCategoryRef.current = category; // ← ★追加！
+      dispatch({ type: "SET_THEME", theme: themeRef.current, selectedCategory: category });
+      console.log("[🫧 フィルター受信]", category)
     };
 
     const handleNewSubmission = (data: SubmittedCardData) => {
@@ -201,7 +186,10 @@ export function Game() {
 
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
-    socket.on("filterAssigned", handleFilterAssigned);
+    socket.on("filterAssigned", ({ category }) => {
+      selectedCategoryRef.current = category;
+      dispatch({ type: "SET_THEME", theme: themeRef.current, selectedCategory: category });
+    });
     socket.on("newSubmission", handleNewSubmission);
     socket.on("playersUpdate", handlePlayersUpdate);
     socket.on("roundUpdate", handleRoundUpdate);
@@ -301,11 +289,16 @@ export function Game() {
       }
 
       submittingRef.current = true;
+      if (selectedCategoryRef.current === "") {
+        console.warn("カテゴリ未選択でサブミットがブロックされました");
+        submittingRef.current = false;
+        return;
+      }
       const newCard: SubmittedCardData = {
         text: textRef.current,
         playerName: playerNameRef.current || "名無し",
         theme: themeRef.current,
-        filterCategory: selectedCategoryRef.current || "", // ← ★修正！,
+        filterCategory: selectedCategoryRef.current, // ← ★修正！,
         turnIndex: currentTurnIndex,
         round: currentRoundRef.current,
         score: getScoreForTurn(currentTurnIndex), // ← これを追加
@@ -487,7 +480,6 @@ export function Game() {
         submitted={phase !== "composing"}
         allSubmitted={phase === "finished"}
         inputRef={inputRef}
-        inputHeight={120}
         onCompositionStart={handleCompositionStart}
         onCompositionEnd={handleCompositionEnd}
       />

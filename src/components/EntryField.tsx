@@ -10,7 +10,6 @@ type EntryFieldProps = {
   submitted: boolean;
   allSubmitted: boolean;
   inputRef: React.RefObject<HTMLInputElement | null>; // 👈 `| null` を追加
-  inputHeight: number;
   onCompositionStart: () => void;
   onCompositionEnd: () => void;
 };
@@ -25,7 +24,6 @@ export const EntryField: React.FC<EntryFieldProps> = ({
   submitted,
   allSubmitted,
   inputRef,
-  inputHeight,
   onCompositionStart,
   onCompositionEnd,
 }) => {
@@ -36,7 +34,7 @@ export const EntryField: React.FC<EntryFieldProps> = ({
         bottom: 0,
         left: 0,
         right: "200px",
-        height: inputHeight,
+        height: "120px",
         background: "#1e1e1e",
         padding: "1rem 2rem",
         boxShadow: "0 -2px 8px rgba(0,0,0,0.7)",

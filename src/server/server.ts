@@ -10,9 +10,8 @@ import {
   SCORE_FAILED_POKE,
   THINKING_TIME_LIMIT,
 } from "../constants.js";
-import filters from "../data/filters.json" with { type: "json" };
-import themes from "../data/themes.json" with { type: "json" };
-import { Player, SubmittedCardData } from "../types/gameTypes.js";
+import { GamePhase, Player, SubmittedCardData } from "../types/gameTypes.js";
+import { chooseRandomFilterCategory, chooseRandomTheme } from "./choose.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,34 +50,19 @@ const players = new Map<string, Player>();
 const submittedCardsInThisRound = new Map<string, number>();
 const submittedCards = new Map<string, SubmittedCardData>(); // ここはstringキーのMap
 const pokeHistory = new Map<string, boolean>();
-const timeUpMap = {
-  composing: new Set<string>(),
-  thinking: new Set<string>(),
-  poking: new Set<string>(),
+
+type TimeUpPhase = Exclude<GamePhase, "waiting" | "finished">;
+const timeUpMap: Record<TimeUpPhase, Set<string>> = {
+  composing: new Set(),
+  thinking: new Set(),
+  poking: new Set(),
 };
 
 let currentTheme: string | null = null;
 let currentRound = 0;
-type Phase = "composing" | "thinking" | "poking" | "finished";
-let phase: Phase = "composing";
+let phase: GamePhase = "composing";
 
 let thinkingTimer: NodeJS.Timeout | null = null;
-
-const chooseRandomTheme = () => {
-  const idx = Math.floor(Math.random() * themes.length);
-  return themes[idx];
-};
-
-function chooseRandomFilterCategory(usedFilters: Set<string>): string {
-  const filterCategories = Object.keys(filters);
-  const availableFilters = filterCategories.filter(
-    (filter) => !usedFilters.has(filter)
-  );
-  if (availableFilters.length === 0) {
-    return filterCategories[Math.floor(Math.random() * filterCategories.length)];
-  }
-  return availableFilters[Math.floor(Math.random() * availableFilters.length)];
-}
 
 const broadcastPlayers = () => {
   io.emit("playersUpdate", Array.from(players.values()));
@@ -289,7 +273,7 @@ io.on("connection", (socket) => {
 
   socket.on("timeUp", ({ phase: clientPhase }) => {
     if (clientPhase !== phase) return;
-    if (phase === "finished") return;
+    if (phase === "waiting" || phase === "finished") return;
 
     // console.log(`[timeUp] phase=${phase}, received from ${socket.id}`);
 

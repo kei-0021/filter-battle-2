@@ -56,7 +56,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           wordWrap: "break-word",
         }}
       >
-        {filterWords.join(", ")}
+        {filterWords?.length ? filterWords.join(", ") : "（フィルター未設定）"}
       </div>
     </div>
   );

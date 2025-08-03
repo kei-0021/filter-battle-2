@@ -52,27 +52,27 @@ export function RuleModal({ open, onClose }: RuleModalProps) {
           <h3 style={{ fontWeight: "bold", marginBottom: "0.5rem" }}>📍 ゲームの流れ</h3>
           <ol style={{ paddingLeft: "1.2rem", marginBottom: 0 }}>
             <li>
-              <strong>① お題発表フェーズ</strong>：共通のお題（例：「学校あるある」）が提示されます。
+              <strong>お題発表フェーズ</strong>：共通のお題（例：「学校あるある」）が提示されます。
             </li>
             <li>
-              <strong>② 投稿フェーズ</strong>：お題に沿ってカードを投稿します。
+              <strong>投稿フェーズ</strong>：お題に沿ってカードを投稿します。
               <br />
               ※自分のフィルターに対応した<strong>キーワードを1つ以上含める必要</strong>があります。
             </li>
             <li>
-              <strong>③ 推理フェーズ</strong>：他のカードを見て、どんなフィルターかを推理します。
+              <strong>推理フェーズ</strong>：他のカードを見て、どんなフィルターかを推理します。
             </li>
             <li>
-              <strong>④ つつきフェーズ</strong>：1人1回、相手のフィルターを「つついて」指摘できます。
+              <strong>つつきフェーズ</strong>：1人1回、相手のフィルターを「つついて」指摘できます。
             </li>
             <li>
-              <strong>⑤ 得点計算と次ラウンド</strong>：ポイントの増減が行われ、次のラウンドに進みます。
+              <strong>得点計算と次ラウンド</strong>：ポイントの増減が行われ、次のラウンドに進みます。
             </li>
           </ol>
         </section>
 
         <section style={{ marginBottom: "1rem" }}>
-          <h3 style={{ fontWeight: "bold", marginBottom: "0.5rem" }}>🛡 フィルターとは？</h3>
+          <h3 style={{ fontWeight: "bold", marginBottom: "0.5rem" }}>🫧 フィルターとは？</h3>
           <p>
             「フィルター」とは、あなたが投稿するカードに含めなければならない
             <strong>テーマ（カテゴリ）</strong>のことです。例えば「体育」や「文化祭」などがあります。
@@ -101,7 +101,7 @@ export function RuleModal({ open, onClose }: RuleModalProps) {
         </section>
 
         <section style={{ marginBottom: "1rem" }}>
-          <h3 style={{ fontWeight: "bold", marginBottom: "0.5rem" }}>👀 推理とアクション</h3>
+          <h3 style={{ fontWeight: "bold", marginBottom: "0.5rem" }}>🔍 推理とアクション</h3>
           <ul style={{ paddingLeft: "1.2rem", listStyleType: "disc", marginBottom: 0 }}>
             <li>他のプレイヤーのカードを見て、<strong>どんなフィルターかを推理</strong>しましょう。</li>
             <li>
@@ -117,7 +117,7 @@ export function RuleModal({ open, onClose }: RuleModalProps) {
         <section>
           <h3 style={{ fontWeight: "bold", marginBottom: "0.5rem" }}>💡 得点ルール</h3>
           <ul style={{ paddingLeft: "1.2rem", listStyleType: "disc", marginBottom: 0 }}>
-            <li>カードを早めに出すほど高得点（例：1枚目 4点 → 2枚目 3点 → ...）</li>
+            <li>カードを早めにつつくほど高得点（例：1枚目 4点 → 2枚目 3点 → ...）を狙える！</li>
             <li><strong>「つつく」が的中</strong>すると、カードの得点を獲得できます。</li>
             <li><strong>見破られたプレイヤー</strong>はそのカードを失い、ポイントも減点。</li>
             <li>
